@@ -6,3 +6,6 @@ knowledge/exness/active.json.tmp
 *.key
 *.pem
 .env*
+
+dist/
+*.tgz

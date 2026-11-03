@@ -1,20 +1,17 @@
 {
-  "name": "ex-api-rules",
-  "version": "0.1.0",
+  "name": "ex-api-rules-workspace",
+  "version": "0.2.0",
   "private": true,
-  "description": "On-demand Exness API evidence collection and offline code review",
+  "description": "Portable Exness API evidence and review tooling",
   "engines": {
     "node": ">=22"
   },
   "scripts": {
-    "rules": "node tools/exness-rules.cjs",
-    "test:rules": "node --test tests/exness-rules.test.cjs",
-    "test": "node --test tests/exness-rules.test.cjs"
+    "build": "node scripts/build.cjs",
+    "test": "node --test tests/exness-rules.test.cjs tests/architecture.test.cjs",
+    "validate": "node scripts/validate.cjs",
+    "release": "node scripts/release.cjs",
+    "test:package": "node scripts/package-smoke.cjs"
   },
-  "dependencies": {
-    "acorn": "8.19.0",
-    "ajv": "8.20.0",
-    "cheerio": "1.2.0",
-    "yaml": "2.9.1"
-  }
+  "packageManager": "pnpm@11.25.0"
 }

@@ -1,0 +1,15 @@
+# Portable protocol
+
+Schemas use JSON Schema 2020-12. Schema URNs are stable contract identifiers (the bundle contract URN :1 defines the first portable contract whose envelope schemaVersion is 2). Lock/report/catalog/rule/check contracts currently use schemaVersion 1 where present. Tool version uses SemVer independently of bundle identity. Future incompatible contracts need new schema identifiers and migration support.
+
+Canonical JSON: recursively sort object property names by UTF-16 code units, retain array order, encode with ECMAScript JSON string escaping, omit whitespace and trailing newline. Strings are not Unicode-normalized. Protocol numbers must be safe integers; decimal quantities use strings. Missing/undefined, NaN and infinite values are not protocol values. Non-JavaScript readers should implement these rules rather than rely on their language's default JSON key order/escaping. tests/fixtures/protocol-v1.json is a shared cross-language vector.
+
+A portable envelope has schemaVersion:2, manifest, rules and blobs. Each blob key is its raw-byte SHA-256; its value is canonical RFC 4648 base64 with padding. Exactly the referenced source/local-evidence hashes must be included. Source records retain URL, fetched time, SHA-256 and relative snapshot path. Rules retain stable IDs, kind, scope, statement, evidence and lifecycle. Evidence can cite sourceId with pointer/terms or a sanitized local snapshot/hash. Missing IDs, conflicting references, successors or corrupt blobs invalidate the bundle. Anchor matching is a separate CLI check, never proof of semantic equivalence.
+
+bundleHash = SHA-256(canonical JSON of {sources:manifest.sources,rules}). This preserves the approved legacy algorithm. artifactSha256 = SHA-256(canonical JSON of the entire portable envelope). SHA256SUMS instead hashes the exact downloaded file bytes (including formatting/newline). These digests have distinct purposes. A hash establishes integrity; maintainer review establishes intended trust.
+
+The legacy manifest ID is the original candidate ID; reports retain its historical approved version v-<candidate>-<hash-prefix>. New approvals assign manifest IDs v-<candidate>-<hash-prefix>. No legacy source, rule or manifest file is rewritten.
+
+Rule lifecycle: draft -> in_review -> approved; deprecated/superseded remain available for history but are excluded from conformance checks. Superseded requires supersededBy. approved inference remains inference, never an enforceable requirement. Observations include date, scope and sanitized provenance. Preserve contradictions as separate evidence.
+
+JSON review reports are the primary machine interface. Findings include ruleId, file, line, severity, kind, evidence and recommendation. SARIF 2.1.0 preserves rule IDs, location, evidence and fingerprints. A stable result fingerprint is reproducible for identical code/tool/bundle/profile; timestamps and source freshness remain metadata. Unsupported adapters and failed parsing are manual review, never pass.

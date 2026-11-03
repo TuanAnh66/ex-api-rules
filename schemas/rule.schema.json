@@ -1,0 +1,135 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:ex-api-rules:rule:1",
+  "type": "object",
+  "required": [
+    "id",
+    "scope",
+    "kind",
+    "statement"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^[A-Z][A-Z0-9-]+$"
+    },
+    "scope": {
+      "enum": [
+        "common",
+        "payments",
+        "trading"
+      ]
+    },
+    "kind": {
+      "enum": [
+        "documented",
+        "observed",
+        "inference"
+      ]
+    },
+    "statement": {
+      "type": "string",
+      "minLength": 1
+    },
+    "evidence": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "properties": {
+          "sourceId": {
+            "type": "string"
+          },
+          "snapshot": {
+            "type": "string"
+          },
+          "sha256": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          },
+          "terms": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "anyOf": [
+          {
+            "required": [
+              "sourceId",
+              "terms"
+            ]
+          },
+          {
+            "required": [
+              "snapshot",
+              "sha256"
+            ]
+          }
+        ]
+      }
+    },
+    "localEvidence": {
+      "type": "string"
+    },
+    "lifecycle": {
+      "type": "object",
+      "required": [
+        "status",
+        "revision",
+        "introducedIn"
+      ],
+      "properties": {
+        "status": {
+          "enum": [
+            "draft",
+            "in_review",
+            "approved",
+            "deprecated",
+            "superseded"
+          ]
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "introducedIn": {
+          "type": "string",
+          "minLength": 1
+        },
+        "supersededBy": {
+          "type": "string"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "const": "superseded"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "supersededBy"
+            ]
+          }
+        }
+      ]
+    }
+  },
+  "anyOf": [
+    {
+      "required": [
+        "evidence"
+      ]
+    },
+    {
+      "required": [
+        "localEvidence"
+      ]
+    }
+  ]
+}

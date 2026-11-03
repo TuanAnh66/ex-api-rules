@@ -1,0 +1,36 @@
+{
+  "name": "ex-api-rules-core",
+  "version": "0.2.0",
+  "description": "Language-neutral Exness rule bundle and schema validation",
+  "main": "src/index.cjs",
+  "types": "src/index.d.ts",
+  "files": [
+    "src",
+    "schemas",
+    "README.md",
+    "NOTICE"
+  ],
+  "exports": {
+    ".": {
+      "types": "./src/index.d.ts",
+      "require": "./src/index.cjs",
+      "default": "./src/index.cjs"
+    },
+    "./schemas/*": "./schemas/*"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/TuanAnh66/ex-api-rules.git",
+    "directory": "packages/core"
+  },
+  "dependencies": {
+    "ajv": "8.20.0"
+  },
+  "license": "UNLICENSED"
+}

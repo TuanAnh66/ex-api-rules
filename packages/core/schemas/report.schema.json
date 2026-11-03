@@ -1,0 +1,89 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:ex-api-rules:report:1",
+  "type": "object",
+  "required": [
+    "schemaVersion",
+    "toolVersion",
+    "ruleVersion",
+    "bundleHash",
+    "codeVersion",
+    "findings",
+    "manualChecks",
+    "coverage",
+    "resultFingerprint"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": 1
+    },
+    "toolVersion": {
+      "type": "string"
+    },
+    "ruleVersion": {
+      "type": "string"
+    },
+    "bundleHash": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "resultFingerprint": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "findings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "file",
+          "line",
+          "ruleId",
+          "severity",
+          "title",
+          "recommendation",
+          "evidence",
+          "kind"
+        ],
+        "properties": {
+          "file": {
+            "type": "string"
+          },
+          "line": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "ruleId": {
+            "type": "string"
+          },
+          "severity": {
+            "enum": [
+              "P1",
+              "P2",
+              "P3"
+            ]
+          },
+          "kind": {
+            "enum": [
+              "documented",
+              "observed"
+            ]
+          },
+          "evidence": {
+            "type": "array",
+            "minItems": 1
+          }
+        }
+      }
+    },
+    "manualChecks": {
+      "type": "array"
+    },
+    "codeVersion": {
+      "type": "object"
+    },
+    "coverage": {
+      "type": "object"
+    }
+  }
+}

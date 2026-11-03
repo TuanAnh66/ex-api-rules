@@ -6,20 +6,28 @@ settings:
 
 importers:
 
-  .:
+  .: {}
+
+  packages/cli:
     dependencies:
       acorn:
         specifier: 8.19.0
         version: 8.19.0
-      ajv:
-        specifier: 8.20.0
-        version: 8.20.0
       cheerio:
         specifier: 1.2.0
         version: 1.2.0
+      ex-api-rules-core:
+        specifier: workspace:^
+        version: link:../core
       yaml:
         specifier: 2.9.1
         version: 2.9.1
+
+  packages/core:
+    dependencies:
+      ajv:
+        specifier: 8.20.0
+        version: 8.20.0
 
 packages:
 

@@ -1,0 +1,732 @@
+[
+  {
+    "id": "COMMON-SIGN-001",
+    "scope": "common",
+    "kind": "documented",
+    "statement": "Sign decoded EXN-DATA bytes using Ed25519; body_hash covers the exact sent body; use unpadded base64url.",
+    "evidence": [
+      {
+        "sourceId": "auth-signing",
+        "terms": [
+          "Ed25519",
+          "decoded",
+          "body_hash",
+          "padding"
+        ]
+      }
+    ],
+    "tests": [
+      "signing metadata regression fixtures"
+    ],
+    "lifecycle": {
+      "status": "draft",
+      "revision": 1,
+      "introducedIn": "0.2.0-authoring"
+    }
+  },
+  {
+    "id": "COMMON-GET-002",
+    "scope": "common",
+    "kind": "documented",
+    "statement": "Signed GET includes an empty EXN-IDEMPOTENCY-KEY header and empty signed idempotency_key.",
+    "evidence": [
+      {
+        "sourceId": "auth-signing",
+        "terms": [
+          "GET",
+          "empty",
+          "EXN-IDEMPOTENCY-KEY"
+        ]
+      }
+    ],
+    "lifecycle": {
+      "status": "draft",
+      "revision": 1,
+      "introducedIn": "0.2.0-authoring"
+    }
+  },
+  {
+    "id": "COMMON-TIME-003",
+    "scope": "common",
+    "kind": "documented",
+    "statement": "Generate fresh signatures and Unix millisecond timestamps close to server time.",
+    "evidence": [
+      {
+        "sourceId": "auth-signing",
+        "terms": [
+          "milliseconds",
+          "fresh",
+          "timestamp"
+        ]
+      }
+    ],
+    "lifecycle": {
+      "status": "draft",
+      "revision": 1,
+      "introducedIn": "0.2.0-authoring"
+    }
+  },
+  {
+    "id": "COMMON-ACCESS-004",
+    "scope": "common",
+    "kind": "documented",
+    "statement": "Validate operation scope, account access and source-IP restrictions; authentication alone does not establish transfer eligibility.",
+    "evidence": [
+      {
+        "sourceId": "trading-spec",
+        "pointer": "#/info/description",
+        "terms": [
+          "source IP",
+          "operation scope"
+        ]
+      }
+    ],
+    "lifecycle": {
+      "status": "draft",
+      "revision": 1,
+      "introducedIn": "0.2.0-authoring"
+    }
+  },
+  {
+    "id": "PAY-REQUEST-001",
+    "scope": "payments",
+    "kind": "documented",
+    "statement": "TransferRequest requires destination_type, source_account, destination_account and amount; additional fields are forbidden.",
+    "evidence": [
+      {
+        "sourceId": "payments-spec",
+        "pointer": "#/components/schemas/TransferRequest",
+        "terms": [
+          "additionalProperties",
+          "source_account",
+          "destination_account",
+          "destination_type",
+          "amount"
+        ]
+      }
+    ],
+    "endpoints": [
+      "POST /v1/transfers"
+    ],
+    "reviewTargets": [
+      "transfer-*.cjs"
+    ],
+    "tests": [
+      "transfer body schema regression"
+    ],
+    "lifecycle": {
+      "status": "draft",
+      "revision": 1,
+      "introducedIn": "0.2.0-authoring"
+    }
+  },
+  {
+    "id": "PAY-AMOUNT-002",
+    "scope": "payments",
+    "kind": "documented",
+    "statement": "Amounts are positive decimal strings in source currency. Enforce currency-specific precision; schema shape alone does not establish the allowed USC precision.",
+    "evidence": [
+      {
+        "sourceId": "payments-spec",
+        "pointer": "#/components/schemas/Amount",
+        "terms": [
+          "string",
+          "Positive",
+          "decimal",
+          "currency"
+        ]
+      }
+    ],
+    "endpoints": [
+      "POST /v1/transfers"
+    ],
+    "reviewTargets": [
+      "transfer-*.cjs"
+    ],
+    "tests": [
+      "amount type/precision regression"
+    ],
+    "lifecycle": {
+      "status": "draft",
+      "revision": 1,
+      "introducedIn": "0.2.0-authoring"
+    }
+  },
+  {
+    "id": "PAY-UUID-003",
+    "scope": "payments",
+    "kind": "documented",
+    "statement": "Each new transfer uses a canonical random UUID; recovery of the same intent preserves its UUID and request.",
+    "evidence": [
+      {
+        "sourceId": "payments-spec",
+        "pointer": "#/info/description",
+        "terms": [
+          "canonical",
+          "UUID",
+          "same request"
+        ]
+      }
+    ],
+    "endpoints": [
+      "POST /v1/transfers"
+    ],
+    "reviewTargets": [
+      "transfer-*.cjs"
+    ],
+    "tests": [
+      "unknown-outcome retry regression"
+    ],
+    "lifecycle": {
+      "status": "draft",
+      "revision": 1,
+      "introducedIn": "0.2.0-authoring"
+    }
+  },
+  {
+    "id": "PAY-JOURNAL-004",
+    "scope": "payments",
+    "kind": "documented",
+    "statement": "Durably record every attempt before sending; unknown outcomes survive restarts and require reconciliation without a new intent.",
+    "evidence": [
+      {
+        "sourceId": "payments-spec",
+        "pointer": "#/info/description",
+        "terms": [
+          "durably",
+          "unknown",
+          "before"
+        ]
+      }
+    ],
+    "reviewTargets": [
+      "transfer-*.cjs"
+    ],
+    "tests": [
+      "durable journal before POST"
+    ],
+    "lifecycle": {
+      "status": "draft",
+      "revision": 1,
+      "introducedIn": "0.2.0-authoring"
+    }
+  },
+  {
+    "id": "PAY-STATE-005",
+    "scope": "payments",
+    "kind": "documented",
+    "statement": "201 means created. Track processing until done or rejected; a created transfer cannot be cancelled or reversed via this API.",
+    "evidence": [
+      {
+        "sourceId": "payments-concepts",
+        "terms": [
+          "processing",
+          "done",
+          "rejected",
+          "cancelled"
+        ]
+      }
+    ],
+    "endpoints": [
+      "GET /v1/transfers/{transfer_id}"
+    ],
+    "tests": [
+      "created versus final state"
+    ],
+    "lifecycle": {
+      "status": "draft",
+      "revision": 1,
+      "introducedIn": "0.2.0-authoring"
+    }
+  },
+  {
+    "id": "PAY-RECOVERY-006",
+    "scope": "payments",
+    "kind": "documented",
+    "statement": "A validation error after an earlier unknown outcome does not prove no transfer exists. Preserve the request and key, retire pending sends before reconciliation.",
+    "evidence": [
+      {
+        "sourceId": "payments-recovery",
+        "terms": [
+          "unknown",
+          "key",
+          "Transaction History"
+        ]
+      }
+    ],
+    "endpoints": [
+      "POST /v1/transfers"
+    ],
+    "tests": [
+      "unknown then 3001 remains unknown"
+    ],
+    "lifecycle": {
+      "status": "draft",
+      "revision": 1,
+      "introducedIn": "0.2.0-authoring"
+    }
+  },
+  {
+    "id": "PAY-ELIGIBILITY-007",
+    "scope": "payments",
+    "kind": "documented",
+    "statement": "Use supported Exness-platform accounts; MT4/MT5 sources and destinations are unsupported. Distinguish own-account and authorized partner transfers.",
+    "evidence": [
+      {
+        "sourceId": "payments-concepts",
+        "terms": [
+          "MT4",
+          "MT5",
+          "own_account",
+          "another_client",
+          "Reward Wallet"
+        ]
+      }
+    ],
+    "endpoints": [
+      "POST /v1/transfers"
+    ],
+    "lifecycle": {
+      "status": "draft",
+      "revision": 1,
+      "introducedIn": "0.2.0-authoring"
+    }
+  },
+  {
+    "id": "PAY-LIMITS-008",
+    "scope": "payments",
+    "kind": "documented",
+    "statement": "Apply the published per-key operation request limits across workers; keep polling inside these limits.",
+    "evidence": [
+      {
+        "sourceId": "payments-limits",
+        "terms": [
+          "3",
+          "per API key",
+          "operation"
+        ]
+      }
+    ],
+    "tests": [
+      "rate-limit change detection"
+    ],
+    "lifecycle": {
+      "status": "draft",
+      "revision": 1,
+      "introducedIn": "0.2.0-authoring"
+    }
+  },
+  {
+    "id": "PAY-ERRORS-009",
+    "scope": "payments",
+    "kind": "documented",
+    "statement": "Use public code and error_message plus operation context. A 3001 response alone does not identify a rejected field.",
+    "evidence": [
+      {
+        "sourceId": "payments-errors",
+        "terms": [
+          "3001",
+          "REQUEST_INVALID_PARAMETERS",
+          "description",
+          "code"
+        ]
+      }
+    ],
+    "tests": [
+      "public error-code change detection"
+    ],
+    "lifecycle": {
+      "status": "draft",
+      "revision": 1,
+      "introducedIn": "0.2.0-authoring"
+    }
+  },
+  {
+    "id": "PAY-ACCOUNT-ID-010",
+    "scope": "payments",
+    "kind": "documented",
+    "statement": "Account identifiers are nonempty strings sent exactly as received, not converted to numbers.",
+    "evidence": [
+      {
+        "sourceId": "payments-spec",
+        "pointer": "#/components/schemas/AccountId",
+        "terms": [
+          "string",
+          "minLength",
+          "number"
+        ]
+      }
+    ],
+    "endpoints": [
+      "POST /v1/transfers"
+    ],
+    "lifecycle": {
+      "status": "draft",
+      "revision": 1,
+      "introducedIn": "0.2.0-authoring"
+    }
+  },
+  {
+    "id": "PAY-RESPONSE-011",
+    "scope": "payments",
+    "kind": "documented",
+    "statement": "The published schema models transfer identifiers as numeric strings; keep this contract distinct from numeric IDs observed at runtime.",
+    "evidence": [
+      {
+        "sourceId": "payments-spec",
+        "pointer": "#/components/schemas/TransferId",
+        "terms": [
+          "string",
+          "pattern"
+        ]
+      }
+    ],
+    "endpoints": [
+      "GET /v1/transfers/{transfer_id}"
+    ],
+    "lifecycle": {
+      "status": "draft",
+      "revision": 1,
+      "introducedIn": "0.2.0-authoring"
+    }
+  },
+  {
+    "id": "TRADE-HOST-001",
+    "scope": "trading",
+    "kind": "documented",
+    "statement": "Resolve the account Access Point via the configured Gateway before account-scoped Trader REST and WebSocket calls; do not copy an example host.",
+    "evidence": [
+      {
+        "sourceId": "trading-discovery",
+        "terms": [
+          "Gateway",
+          "Access Point",
+          "Do not copy"
+        ]
+      }
+    ],
+    "endpoints": [
+      "GET /v1/trading/access-point"
+    ],
+    "reviewTargets": [
+      "check-exness-trading.cjs"
+    ],
+    "tests": [
+      "gateway used as account host"
+    ],
+    "lifecycle": {
+      "status": "draft",
+      "revision": 1,
+      "introducedIn": "0.2.0-authoring"
+    }
+  },
+  {
+    "id": "TRADE-ACK-002",
+    "scope": "trading",
+    "kind": "documented",
+    "statement": "Trading ACK is acceptance, not successful execution. Correlate operation_id/client_request_id with events or GET operation status.",
+    "evidence": [
+      {
+        "sourceId": "trading-spec",
+        "pointer": "#/info/description",
+        "terms": [
+          "ACK",
+          "operation_id",
+          "transaction_event",
+          "final"
+        ]
+      }
+    ],
+    "endpoints": [
+      "POST /v1/trading/accounts/{account_id}/orders",
+      "GET /v1/trading/accounts/{account_id}/operations/{operation_id}"
+    ],
+    "tests": [
+      "ACK incorrectly marked done"
+    ],
+    "lifecycle": {
+      "status": "draft",
+      "revision": 1,
+      "introducedIn": "0.2.0-authoring"
+    }
+  },
+  {
+    "id": "TRADE-OPERATIONS-003",
+    "scope": "trading",
+    "kind": "documented",
+    "statement": "Operation status is pending, confirmed, rejected or failed. Poll retained operation status when the transaction event is missing.",
+    "evidence": [
+      {
+        "sourceId": "trading-spec",
+        "pointer": "#/components/schemas/OperationStatusResponse",
+        "terms": [
+          "pending",
+          "confirmed",
+          "rejected",
+          "failed"
+        ]
+      }
+    ],
+    "tests": [
+      "operation status schema"
+    ],
+    "lifecycle": {
+      "status": "draft",
+      "revision": 1,
+      "introducedIn": "0.2.0-authoring"
+    }
+  },
+  {
+    "id": "TRADE-IDEMPOTENCY-004",
+    "scope": "trading",
+    "kind": "documented",
+    "statement": "Trading mutation retries preserve account, operation kind, key and payload. Trading idempotency retention is limited; do not copy Payments lifetime assumptions.",
+    "evidence": [
+      {
+        "sourceId": "trading-spec",
+        "pointer": "#/info/description",
+        "terms": [
+          "retention",
+          "same account",
+          "request payload"
+        ]
+      }
+    ],
+    "tests": [
+      "trading versus payments retention"
+    ],
+    "lifecycle": {
+      "status": "draft",
+      "revision": 1,
+      "introducedIn": "0.2.0-authoring"
+    }
+  },
+  {
+    "id": "TRADE-PRECISION-005",
+    "scope": "trading",
+    "kind": "documented",
+    "statement": "Trading request prices and volumes are decimal strings. Instrument precision and volume steps must come from instrument conditions, not account currency precision.",
+    "evidence": [
+      {
+        "sourceId": "trading-spec",
+        "pointer": "#/info/description",
+        "terms": [
+          "decimal strings",
+          "instrument-specific",
+          "precision"
+        ]
+      }
+    ],
+    "endpoints": [
+      "GET /v1/configuration/accounts/{account_id}/instruments/{instrument}/conditions"
+    ],
+    "tests": [
+      "binary-float conversion regression"
+    ],
+    "lifecycle": {
+      "status": "draft",
+      "revision": 1,
+      "introducedIn": "0.2.0-authoring"
+    }
+  },
+  {
+    "id": "TRADE-RUNTIME-006",
+    "scope": "trading",
+    "kind": "documented",
+    "statement": "Evaluate account and instrument restrictions before order/position mutations; opening, modifying and closing have operation-specific restrictions.",
+    "evidence": [
+      {
+        "sourceId": "trading-spec",
+        "pointer": "#/paths/~1v1~1trading~1accounts~1{account_id}~1orders/post",
+        "terms": [
+          "close_only",
+          "volume_step",
+          "x-runtime-restrictions"
+        ]
+      }
+    ],
+    "endpoints": [
+      "POST /v1/trading/accounts/{account_id}/orders",
+      "PATCH /v1/trading/accounts/{account_id}/orders/{order_id}",
+      "DELETE /v1/trading/accounts/{account_id}/orders/{order_id}",
+      "POST /v1/trading/accounts/{account_id}/positions",
+      "PATCH /v1/trading/accounts/{account_id}/positions/{position_id}",
+      "DELETE /v1/trading/accounts/{account_id}/positions/{position_id}"
+    ],
+    "lifecycle": {
+      "status": "draft",
+      "revision": 1,
+      "introducedIn": "0.2.0-authoring"
+    }
+  },
+  {
+    "id": "TRADE-SNAPSHOT-007",
+    "scope": "trading",
+    "kind": "documented",
+    "statement": "Reconcile current open orders and positions with snapshots when events or correlation identifiers are lost; history is not the current-state source.",
+    "evidence": [
+      {
+        "sourceId": "trading-spec",
+        "pointer": "#/info/description",
+        "terms": [
+          "snapshot",
+          "open orders",
+          "history"
+        ]
+      },
+      {
+        "sourceId": "trading-spec",
+        "pointer": "#/paths/~1v1~1trading~1accounts~1{account_id}~1orders/post",
+        "terms": [
+          "reconcile",
+          "snapshots"
+        ]
+      }
+    ],
+    "endpoints": [
+      "GET /v1/trading/accounts/{account_id}/snapshot"
+    ],
+    "lifecycle": {
+      "status": "draft",
+      "revision": 1,
+      "introducedIn": "0.2.0-authoring"
+    }
+  },
+  {
+    "id": "TRADE-LIMITS-008",
+    "scope": "trading",
+    "kind": "documented",
+    "statement": "Use the effective account configuration limits for Trader requests and subscriptions; do not reuse Payments limits.",
+    "evidence": [
+      {
+        "sourceId": "trading-limits",
+        "terms": [
+          "limits",
+          "account"
+        ]
+      }
+    ],
+    "endpoints": [
+      "GET /v1/configuration/accounts/{account_id}/limits"
+    ],
+    "lifecycle": {
+      "status": "draft",
+      "revision": 1,
+      "introducedIn": "0.2.0-authoring"
+    }
+  },
+  {
+    "id": "PAY-BALANCE-012",
+    "scope": "payments",
+    "kind": "documented",
+    "statement": "The published AccountBalance schema requires account_id, balance and currency, with nonnegative decimal balance; preserve its distinction from observed response shapes.",
+    "evidence": [
+      {
+        "sourceId": "payments-spec",
+        "pointer": "#/components/schemas/AccountBalance",
+        "terms": [
+          "account_id",
+          "balance",
+          "currency",
+          "non-negative"
+        ]
+      }
+    ],
+    "endpoints": [
+      "GET /v1/accounts/{account_id}/balance"
+    ],
+    "lifecycle": {
+      "status": "draft",
+      "revision": 1,
+      "introducedIn": "0.2.0-authoring"
+    }
+  },
+  {
+    "id": "PAY-HOST-013",
+    "scope": "payments",
+    "kind": "documented",
+    "statement": "Use the Payments API host supplied during onboarding for the relative Payments paths; Trader Access Point discovery is a separate flow.",
+    "evidence": [
+      {
+        "sourceId": "payments-overview",
+        "terms": [
+          "host",
+          "onboarding",
+          "relative"
+        ]
+      }
+    ],
+    "endpoints": [
+      "POST /v1/transfers",
+      "GET /v1/accounts/{account_id}/balance"
+    ],
+    "lifecycle": {
+      "status": "draft",
+      "revision": 1,
+      "introducedIn": "0.2.0-authoring"
+    }
+  },
+  {
+    "id": "OBS-BALANCE-001",
+    "scope": "payments",
+    "kind": "observed",
+    "statement": "In the 2026-11-03 authorized Cent transfer, balance responses used amount rather than documented balance. Support this only as a tested compatibility behavior.",
+    "localEvidence": "archive/first-success-600-usc.sanitized.json",
+    "conflictsWith": [
+      "PAY-BALANCE-012"
+    ],
+    "tests": [
+      "balance/amount sanitized fixture"
+    ],
+    "lifecycle": {
+      "status": "draft",
+      "revision": 1,
+      "introducedIn": "0.2.0-authoring"
+    }
+  },
+  {
+    "id": "OBS-TRANSFER-ID-002",
+    "scope": "payments",
+    "kind": "observed",
+    "statement": "The 2026-11-03 status response returned a numeric transfer_id while creation returned a string. Accept a matching safe integer without losing precision; this is not a universal API guarantee.",
+    "localEvidence": "archive/first-success-600-usc.sanitized.json",
+    "conflictsWith": [
+      "PAY-RESPONSE-011"
+    ],
+    "tests": [
+      "numeric/string and unsafe ID fixture"
+    ],
+    "lifecycle": {
+      "status": "draft",
+      "revision": 1,
+      "introducedIn": "0.2.0-authoring"
+    }
+  },
+  {
+    "id": "OBS-DESTINATION-003",
+    "scope": "payments",
+    "kind": "observed",
+    "statement": "A source-bound key could not read destination balance, yet the same authorized own-account transfer completed. A destination GET failure alone did not prove transfer ineligibility for this case.",
+    "localEvidence": "archive/first-success-600-usc.sanitized.json",
+    "tests": [
+      "destination GET failure fixture"
+    ],
+    "lifecycle": {
+      "status": "draft",
+      "revision": 1,
+      "introducedIn": "0.2.0-authoring"
+    }
+  },
+  {
+    "id": "INF-3001-001",
+    "scope": "payments",
+    "kind": "inference",
+    "statement": "Historical 422/3001 cause remains unresolved. Backend behavior or original identifiers are possible explanations, not established fixes or review requirements.",
+    "localEvidence": "archive/first-success-600-usc.sanitized.json",
+    "lifecycle": {
+      "status": "draft",
+      "revision": 1,
+      "introducedIn": "0.2.0-authoring"
+    }
+  }
+]

@@ -1,0 +1,28 @@
+{
+  "referenceOnly": true,
+  "runtimeUsable": false,
+  "date": "2026-11-03",
+  "timezone": "Asia/Bangkok",
+  "operation": "own_account",
+  "accountType": "StandardCent",
+  "isDemo": false,
+  "sourceAccount": "90000000001",
+  "destinationAccount": "90000000002",
+  "amount": "600",
+  "currency": "USC",
+  "creationHttpStatus": 201,
+  "finalHttpStatus": 200,
+  "finalState": "done",
+  "postAttempts": 1,
+  "sourceBalanceBefore": "1146",
+  "sourceBalanceAfter": "546",
+  "destinationAmountFromCreationResponse": "600",
+  "destinationBalanceReadUnavailable": true,
+  "identifiers": "Actual account numbers replaced; API key, key hash, UUID and transfer ID omitted",
+  "runtimeObservations": [
+    "Balance response uses amount instead of documented balance",
+    "Status response transfer_id is a number, creation response transfer_id is a string",
+    "Source-bound key cannot read destination balance but can create this own-account transfer"
+  ],
+  "historical3001RootCause": "Unresolved; this success does not establish the cause of earlier failures"
+}

@@ -1,0 +1,30 @@
+name: Offline CI
+on:
+  push:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  validate:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        node: [22, 24]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: ${{ matrix.node }}
+      - run: npm install --global pnpm@11.25.0 --ignore-scripts
+      - run: pnpm install --frozen-lockfile --ignore-scripts
+      - run: pnpm build
+      - run: pnpm validate
+      - run: pnpm test
+      - run: python tests/fixtures/check-protocol.py
+      - run: pnpm release
+      - run: pnpm --dir packages/core pack --pack-destination ../../dist
+      - run: pnpm --dir packages/cli pack --pack-destination ../../dist
+      - run: node scripts/release.cjs --checksums
+      - run: pnpm test:package

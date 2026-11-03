@@ -1,0 +1,74 @@
+[
+  {
+    "id": "JS-SIGNING",
+    "ruleIds": [
+      "COMMON-SIGN-001"
+    ],
+    "adapter": "javascript",
+    "tests": [
+      "tests/exness-rules.test.cjs#review detects wrong signed body/path, wrong host, retry UUID, ACK finality and precision"
+    ]
+  },
+  {
+    "id": "JS-TRANSFER-BODY",
+    "ruleIds": [
+      "PAY-REQUEST-001",
+      "PAY-AMOUNT-002",
+      "PAY-ACCOUNT-ID-010"
+    ],
+    "adapter": "javascript",
+    "tests": [
+      "tests/exness-rules.test.cjs#review detects wrong signed body/path, wrong host, retry UUID, ACK finality and precision"
+    ]
+  },
+  {
+    "id": "JS-RETRY-ID",
+    "ruleIds": [
+      "PAY-UUID-003"
+    ],
+    "adapter": "javascript",
+    "tests": [
+      "tests/exness-rules.test.cjs#review detects wrong signed body/path, wrong host, retry UUID, ACK finality and precision"
+    ]
+  },
+  {
+    "id": "JS-HOST",
+    "ruleIds": [
+      "TRADE-HOST-001"
+    ],
+    "adapter": "javascript",
+    "tests": [
+      "tests/exness-rules.test.cjs#review detects wrong signed body/path, wrong host, retry UUID, ACK finality and precision"
+    ]
+  },
+  {
+    "id": "JS-ACK",
+    "ruleIds": [
+      "TRADE-ACK-002"
+    ],
+    "adapter": "javascript",
+    "tests": [
+      "tests/exness-rules.test.cjs#review detects wrong signed body/path, wrong host, retry UUID, ACK finality and precision"
+    ]
+  },
+  {
+    "id": "JS-PRECISION",
+    "ruleIds": [
+      "TRADE-PRECISION-005"
+    ],
+    "adapter": "javascript",
+    "tests": [
+      "tests/exness-rules.test.cjs#review detects wrong signed body/path, wrong host, retry UUID, ACK finality and precision"
+    ]
+  },
+  {
+    "id": "JS-ID-COMPAT",
+    "ruleIds": [
+      "OBS-TRANSFER-ID-002"
+    ],
+    "adapter": "javascript",
+    "tests": [
+      "tests/exness-rules.test.cjs#review detects wrong signed body/path, wrong host, retry UUID, ACK finality and precision"
+    ]
+  }
+]

@@ -1,0 +1,145 @@
+{
+  "schemaVersion": 1,
+  "legacyApprovedVersion": "v-2026-11-03T16-00-20-366Z-47729188-e3a79f510ff6",
+  "bundleId": "2026-11-03T16-00-20-366Z-47729188",
+  "bundleHash": "e3a79f510ff6364440e5e7d9832f48c9f5ee99ceee5f62e73905d1fe8c0b4e37",
+  "artifactSha256": "bb94bf9aa06a071733b8d20bd5135ef19023903d78ac7807c6f3bfcc6658e859",
+  "distribution": "GitHub Release portable asset; approved source files unchanged",
+  "sources": [
+    {
+      "id": "auth-key-setup",
+      "url": "https://www.exness-api.com/authentication/api-key-and-host-setup",
+      "sha256": "897d18cc25cc184d4cdad6ab5cee98447d2b92f6e37574270a2ec10261e4d2dd"
+    },
+    {
+      "id": "auth-signing",
+      "url": "https://www.exness-api.com/authentication/request-signing",
+      "sha256": "9221657bb34f5e27385120ea2bb7b503d957357371ca8c0df1e2e9805d09f9e2"
+    },
+    {
+      "id": "doc-03c1101f9bbf4de4",
+      "url": "https://www.exness-api.com/trading/get-started/send-first-request",
+      "sha256": "60f140c07d8173893b94cded989f3be6818267eb2360cee830e0e89efcf6d661"
+    },
+    {
+      "id": "doc-67e42b7ded34ab5d",
+      "url": "https://www.exness-api.com/trading/guides/formulas-calculations",
+      "sha256": "86c97154a6f68b23ad1729a062ee8bbf6d9c30ae7c34db761a0349eaf29a7abc"
+    },
+    {
+      "id": "doc-6e0f995f47ec5034",
+      "url": "https://www.exness-api.com/trading/guides/code-examples",
+      "sha256": "c02b40eedd18c92c82f423d47e8869355325dcb826ee460772227a81653a190d"
+    },
+    {
+      "id": "doc-6e961519e98bbb03",
+      "url": "https://www.exness-api.com/payments/guides/transfer-status",
+      "sha256": "9562cbff0d4c49cf0dbda0b275cf8b49b619782808ce5e18b002ffa640dcf2a8"
+    },
+    {
+      "id": "doc-70108efa63b9300b",
+      "url": "https://www.exness-api.com/trading/get-started/recommended-integration-flow",
+      "sha256": "53b4ba23fdff4a245126d3279168693eee37e214e9b4a020f83a338333238a35"
+    },
+    {
+      "id": "doc-aef9a7ec8a9ead91",
+      "url": "https://www.exness-api.com/payments/guides/code-examples",
+      "sha256": "05ee72ffe014e234790619da0bbd407e9b2d45128fa5d71881df23df561c0323"
+    },
+    {
+      "id": "doc-c4093bd7464967e9",
+      "url": "https://www.exness-api.com/payments/guides/account-balance",
+      "sha256": "26c39e308b8f37caced133cb7f1b53d2cdce347ed0c1ac88264690922cb802c6"
+    },
+    {
+      "id": "doc-c4520477f276aa04",
+      "url": "https://www.exness-api.com/payments/get-started/recommended-integration-flow",
+      "sha256": "ba649850c6f79e432c8b99ca0749bddc910a03aa223b14ad10a66164d0ce5393"
+    },
+    {
+      "id": "payments-concepts",
+      "url": "https://www.exness-api.com/payments/core-concepts",
+      "sha256": "a1ad09d36aeed48779f446194f03a99262eb9ce6b940d6f67c0bbfb5d0920a4c"
+    },
+    {
+      "id": "payments-errors",
+      "url": "https://www.exness-api.com/payments/guides/troubleshooting",
+      "sha256": "d80a4985feaded510d7ff5f42c53c81aec26d42ba20a425209c955870c5c32d9"
+    },
+    {
+      "id": "payments-guides",
+      "url": "https://www.exness-api.com/payments/guides",
+      "sha256": "c6fb13e53f95ecc5858a860b9cb80ec73ea23c19a51d2562ddaaba9719424fd4"
+    },
+    {
+      "id": "payments-limits",
+      "url": "https://www.exness-api.com/payments/guides/api-configuration-and-limits",
+      "sha256": "955c57879b6d6405414a1403dcad1b1159af0484bb3de2a19022c8eea42fbed5"
+    },
+    {
+      "id": "payments-overview",
+      "url": "https://www.exness-api.com/payments/get-started",
+      "sha256": "46b8d3ce49fd411004149a0cb5476fe92b719532440d0a91397e8527c7d0d6fd"
+    },
+    {
+      "id": "payments-partner",
+      "url": "https://www.exness-api.com/payments/guides/transfer-another-client",
+      "sha256": "f68c2668532120b308381fa60cc36fb46e65ff89a64dce5ad7feac987f7929e8"
+    },
+    {
+      "id": "payments-recovery",
+      "url": "https://www.exness-api.com/payments/guides/recovery-idempotency",
+      "sha256": "043e703d189be94963c2af8907c9b1b64a2061903366930a6a7b86a1b7cc5f42"
+    },
+    {
+      "id": "payments-releases",
+      "url": "https://www.exness-api.com/payments/changelog/releases",
+      "sha256": "d234f3cee2ebca61a3ee252619c3a16d7c4a7fca47948f63f71e909bfce3093f"
+    },
+    {
+      "id": "payments-spec",
+      "url": "https://www.exness-api.com/openapi/payments.public.yaml",
+      "sha256": "52b82d4e49a7e915f6104cb8b74f0e4e11c128ad2bb9e44d7c81ca5773e32db1"
+    },
+    {
+      "id": "payments-transfer",
+      "url": "https://www.exness-api.com/payments/guides/transfer-own-accounts",
+      "sha256": "95bcad79c838d498a23c411b5b0e055c293e4f54aaaeff22f3060dc498bce1dc"
+    },
+    {
+      "id": "trading-discovery",
+      "url": "https://www.exness-api.com/trading/get-started/access-point-host-discovery",
+      "sha256": "21a9a9e159f51e25666a327c12c076e301de2ee467692fea06e2155a976c716d"
+    },
+    {
+      "id": "trading-errors",
+      "url": "https://www.exness-api.com/trading/guides/troubleshooting",
+      "sha256": "5c6411bb7220eed9552e33b143c34416ba42780364f8e214861ba6ba7261ab1a"
+    },
+    {
+      "id": "trading-guides",
+      "url": "https://www.exness-api.com/trading/guides",
+      "sha256": "be30b6a2c379aac2ceed20125fd179908c1024e1012ec40ebaa6c99013489a61"
+    },
+    {
+      "id": "trading-limits",
+      "url": "https://www.exness-api.com/trading/guides/api-configuration-and-limits",
+      "sha256": "6a585b404f2f3b2bb56f4dbf1e36fc5630b1c610e226976c90f4e76f9402ca99"
+    },
+    {
+      "id": "trading-releases",
+      "url": "https://www.exness-api.com/trading/changelog/releases",
+      "sha256": "bd10443b0a9ee7cab6421e409e3d03af41b84661767f3d6cb0ada0dc938110e2"
+    },
+    {
+      "id": "trading-runtime",
+      "url": "https://www.exness-api.com/trading/guides/runtime-semantics",
+      "sha256": "332813b0fd4cdd44bdf9147152e23ce785cab4052986d6ebc46a1bbb51821d4d"
+    },
+    {
+      "id": "trading-spec",
+      "url": "https://www.exness-api.com/openapi/trading.public.yaml",
+      "sha256": "ebde19011ffbd30240e918f9369c8233fc9c5a4afb27eca0462b40a141d0f1b3"
+    }
+  ]
+}

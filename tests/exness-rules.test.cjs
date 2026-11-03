@@ -1,12 +1,15 @@
 'use strict';
 const test=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),os=require('node:os');
+const isolatedStore=fs.mkdtempSync(path.join(os.tmpdir(),'ex-api-legacy-store-'));
+process.env.EX_API_RULES_DATA_DIR=isolatedStore;
+test.after(()=>fs.rmSync(isolatedStore,{recursive:true,force:true}));
 const core=require('../tools/exness-rules/core.cjs');
 const {allowed,download,fetchSources,compareSources}=require('../tools/exness-rules/sources.cjs');
 const {layout,collect,approve,loadActive,checkUpdates}=require('../tools/exness-rules/store.cjs');
 const {analyze,reviewFiles}=require('../tools/exness-rules/review.cjs');
 const {parse,review}=require('../tools/exness-rules.cjs');
 const {execFileSync,spawnSync}=require('node:child_process');
-const root=path.resolve(__dirname,'..'),catalog=core.readJSON(path.join(root,'knowledge/exness/source-catalog.json'));
+const root=path.resolve(__dirname,'..'),catalog=core.readJSON(path.join(root,'catalog/sources.json'));
 function sourceFixture(id){const active=loadActive(root),source=active.manifest.sources.find(s=>s.id===id);return fs.readFileSync(path.join(active.dir,source.snapshot));}
 const schema={openapi:'3.1.1',info:{title:'fixture',version:'1',description:'Keep same UUID on retry; permission scope and limits 3 requests per second.'},paths:{'/v1/transfers':{post:{'x-public-error-codes':['REQUEST_INVALID_PARAMETERS']}}},components:{schemas:{TransferRequest:{type:'object',additionalProperties:false,required:['destination_type','source_account','destination_account','amount'],properties:{destination_type:{enum:['own_account','another_client']},source_account:{type:'string',minLength:1},destination_account:{type:'string',minLength:1},amount:{type:'string',pattern:'^[0-9]+(\\.[0-9]+)?$'}}}}}};
 function temp(t){const d=fs.mkdtempSync(path.join(os.tmpdir(),'exness-rules-test-'));t.after(()=>{const expected=fs.realpathSync(os.tmpdir())+path.sep+'exness-rules-test-';if(!fs.realpathSync(d).startsWith(expected))throw Error('Refuse cleanup outside test directory');fs.rmSync(d,{recursive:true,force:true});});return d;}
@@ -68,7 +71,7 @@ test('unparseable changed source and moved source are explicitly reported',async
   assert.equal(redirected.changes[0].classification,'source-moved');
 });
 
-const seeds=core.readJSON(path.join(root,'knowledge/exness/rule-seeds.json')).map(r=>({...r,evidence:r.evidence||[{originalPath:r.localEvidence}]}));
+const seeds=core.readJSON(path.join(root,'catalog/rules.json')).map(r=>({...r,evidence:r.evidence||[{originalPath:r.localEvidence}]}));
 const validate=core.validator(JSON.stringify(schema),'TransferRequest');
 test('review detects wrong signed body/path, wrong host, retry UUID, ACK finality and precision',()=>{
   const cases=[

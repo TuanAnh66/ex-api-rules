@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:ex-api-rules:checks:1",
+  "type": "array",
+  "items": {
+    "type": "object",
+    "required": [
+      "id",
+      "ruleIds",
+      "adapter",
+      "tests"
+    ],
+    "properties": {
+      "id": {
+        "type": "string"
+      },
+      "ruleIds": {
+        "type": "array",
+        "minItems": 1,
+        "items": {
+          "type": "string"
+        }
+      },
+      "adapter": {
+        "const": "javascript"
+      },
+      "tests": {
+        "type": "array",
+        "minItems": 1,
+        "items": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}

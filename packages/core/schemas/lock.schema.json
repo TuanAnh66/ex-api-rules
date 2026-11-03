@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:ex-api-rules:lock:1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "toolVersion",
+    "bundleId",
+    "bundleHash",
+    "artifactSha256",
+    "bundleSchemaVersion",
+    "profile"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": 1
+    },
+    "toolVersion": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+    },
+    "bundleId": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9-]+$"
+    },
+    "bundleHash": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "artifactSha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "bundleSchemaVersion": {
+      "const": 2
+    },
+    "profile": {
+      "enum": [
+        "default",
+        "payments",
+        "trading"
+      ]
+    }
+  }
+}

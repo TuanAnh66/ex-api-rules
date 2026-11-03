@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:ex-api-rules:catalog:1",
+  "type": "array",
+  "minItems": 1,
+  "items": {
+    "allOf": [
+      {
+        "$ref": "urn:ex-api-rules:rule:1"
+      },
+      {
+        "required": [
+          "lifecycle"
+        ]
+      }
+    ]
+  }
+}

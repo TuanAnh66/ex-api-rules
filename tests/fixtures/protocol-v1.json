@@ -1,0 +1,6 @@
+{
+  "description": "Language-neutral canonicalization and profile vectors; decimal quantities are strings.",
+  "input": {"z": [true, null, "600.00"], "a": {"n": 7, "b": "USC"}},
+  "canonical": "{\"a\":{\"b\":\"USC\",\"n\":7},\"z\":[true,null,\"600.00\"]}",
+  "unsupported": {"file": "client.py", "content": "raise RuntimeError('must never execute')\n", "adapter": "unsupported"}
+}
