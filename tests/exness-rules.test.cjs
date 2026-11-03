@@ -41,6 +41,70 @@ test('OpenAPI changes distinguish examples, formatting, schemas, scopes, errors,
     const next=structuredClone(schema);mutate(next);const diff=core.classify(raw,JSON.stringify(next),'openapi');assert.equal(diff.classification,'technical');assert(diff.paths.length);
   }
 });
+
+test('OpenAPI annotations never erase named definitions or literal data',()=>{
+  const base={openapi:'3.1.1',paths:{'/fixture':{post:{requestBody:{content:{'application/json':{schema:{type:'object'},example:{examples:'old'}}}},responses:{'200':{description:'fixture'}}}}},components:{schemas:{Payload:{type:'object',properties:{},const:{examples:'old'},enum:[{example:'old'}],default:{externalDocs:'old'},'x-fixture':{examples:'old'}}}}};
+  const assertTechnical=mutate=>{const next=structuredClone(base);mutate(next);const result=core.classify(JSON.stringify(base),JSON.stringify(next),'openapi');assert.equal(result.classification,'technical');assert(result.paths.length);};
+  for(const name of ['example','examples','externalDocs']){
+    const withProperty=structuredClone(base);withProperty.components.schemas.Payload.properties[name]={type:'string'};
+    const changed=structuredClone(withProperty);changed.components.schemas.Payload.properties[name].type='number';
+    const diff=core.classify(JSON.stringify(withProperty),JSON.stringify(changed),'openapi');assert.equal(diff.classification,'technical');assert(diff.paths.includes('/components/schemas/Payload/properties/'+name+'/type'));
+    const withComponent=structuredClone(base);withComponent.components.schemas[name]={type:'string'};
+    const renamed=structuredClone(withComponent);renamed.components.schemas[name].type='number';
+    assert.equal(core.classify(JSON.stringify(withComponent),JSON.stringify(renamed),'openapi').classification,'technical');
+  }
+  assertTechnical(s=>s.components.schemas.Payload.const.examples='new');
+  assertTechnical(s=>s.components.schemas.Payload.enum[0].example='new');
+  assertTechnical(s=>s.components.schemas.Payload.default.externalDocs='new');
+  assertTechnical(s=>s.components.schemas.Payload['x-fixture'].examples='new');
+  const exampleOnly=structuredClone(base);exampleOnly.paths['/fixture'].post.requestBody.content['application/json'].example.examples='new';
+  assert.equal(core.classify(JSON.stringify(base),JSON.stringify(exampleOnly),'openapi').classification,'examples');
+  const annotated=structuredClone(base);annotated.components.schemas.Payload.examples=[{examples:'new'}];
+  assert.equal(core.classify(JSON.stringify(base),JSON.stringify(annotated),'openapi').classification,'examples');
+});
+test('OpenAPI patterned paths and responses preserve opaque specification extensions',()=>{
+  // Both fixtures reproduce FINAL-REVIEW-001 without depending on a report.
+  const before={openapi:'3.1.1',paths:{'/fixture':{get:{responses:{'200':{description:'ok'}}}},'x-fixture':{get:{externalDocs:{url:'old-value'}}}},components:{schemas:{}}};
+  const after=structuredClone(before);after.paths['x-fixture'].get.externalDocs.url='new-value';
+  assert.deepEqual(core.classify(JSON.stringify(before),JSON.stringify(after),'openapi'),{classification:'technical',paths:['/paths/x-fixture/get/externalDocs/url']});
+  const responseBefore=structuredClone(before);responseBefore.paths['/fixture'].get.responses['x-fixture']={content:{'application/json':{schema:{examples:['old-value']}}}};
+  const responseAfter=structuredClone(responseBefore);responseAfter.paths['/fixture'].get.responses['x-fixture'].content['application/json'].schema.examples=['new-value'];
+  assert.deepEqual(core.classify(JSON.stringify(responseBefore),JSON.stringify(responseAfter),'openapi'),{classification:'technical',paths:['/paths/~1fixture/get/responses/x-fixture/content/application~1json/schema/examples']});
+});
+
+test('OpenAPI callback objects preserve opaque specification extensions',()=>{
+  const before={openapi:'3.1.1',paths:{'/fixture':{post:{callbacks:{delivery:{'{$request.query.callback}':{post:{responses:{'200':{description:'ok'}}}},'x-fixture':{post:{externalDocs:{url:'old-value'}}}}}}}},components:{schemas:{}}};
+  const after=structuredClone(before);after.paths['/fixture'].post.callbacks.delivery['x-fixture'].post.externalDocs.url='new-value';
+  assert.deepEqual(core.classify(JSON.stringify(before),JSON.stringify(after),'openapi'),{classification:'technical',paths:['/paths/~1fixture/post/callbacks/delivery/x-fixture/post/externalDocs/url']});
+});
+
+test('OpenAPI pure named maps still analyze x-* names as typed entries',()=>{
+  const payload=()=>({type:'string',examples:['old-value']});
+  const response=()=>({description:'ok',content:{'application/json':{schema:payload()}}});
+  const pathItem=()=>({post:{responses:{'200':response()}}});
+  const callback=()=>({'{$request.query.callback}':pathItem()});
+  const before={openapi:'3.1.1',paths:{'/fixture':{post:{callbacks:{'x-fixture':callback()}}}},webhooks:{'x-fixture':pathItem()},components:{schemas:{Payload:{type:'object',properties:{'x-fixture':payload()}},'x-fixture':payload()},responses:{'x-fixture':response()},callbacks:{'x-fixture':callback()},pathItems:{'x-fixture':pathItem()}}};
+  const responseSchema=r=>r.content['application/json'].schema;
+  const pathSchema=p=>responseSchema(p.post.responses['200']);
+  const callbackSchema=c=>pathSchema(c['{$request.query.callback}']);
+  const entries=[
+    ['properties',s=>s.components.schemas.Payload.properties['x-fixture']],
+    ['components.schemas',s=>s.components.schemas['x-fixture']],
+    ['components.responses',s=>responseSchema(s.components.responses['x-fixture'])],
+    ['operation.callbacks',s=>callbackSchema(s.paths['/fixture'].post.callbacks['x-fixture'])],
+    ['components.callbacks',s=>callbackSchema(s.components.callbacks['x-fixture'])],
+    ['components.pathItems',s=>pathSchema(s.components.pathItems['x-fixture'])],
+    ['webhooks',s=>pathSchema(s.webhooks['x-fixture'])]
+  ];
+  for(const [name,getSchema]of entries){
+    const annotation=structuredClone(before);getSchema(annotation).examples=['new-value'];
+    assert.deepEqual(core.classify(JSON.stringify(before),JSON.stringify(annotation),'openapi'),{classification:'examples',paths:[]},name);
+    const technical=structuredClone(before);getSchema(technical).type='number';
+    const result=core.classify(JSON.stringify(before),JSON.stringify(technical),'openapi');
+    assert.equal(result.classification,'technical',name);assert.equal(result.paths.length,1,name);assert(result.paths[0].endsWith('/type'),name);
+  }
+});
+
 test('discovery fetches appended sources even when the initial batch is partial',async t=>{
   const records=await fetchSources({allowedHosts:['www.exness-api.com'],maxSources:5,sources:[{id:'guides',kind:'html',scope:'payments',discover:true,url:'https://www.exness-api.com/payments/guides'}]},temp(t),async url=>new Response('<article><h1>Documentation</h1><p>These are enough source words to be a real article fixture.</p>'+(url.endsWith('/guides')?'<a href="/payments/guides/troubleshooting">Errors</a><a href="https://api.exness.com/v1/transfers">Forbidden</a>':'')+'</article>'));
   assert.equal(records.length,2);assert(records.every(r=>r.sha256));
@@ -86,15 +150,45 @@ test('review detects wrong signed body/path, wrong host, retry UUID, ACK finalit
   ];
   for(const [code,id]of cases){const report=analyze(code,'fixture.cjs',seeds,validate);assert(report.findings.some(f=>f.ruleId===id),id);assert(report.findings.every(f=>f.line>0&&f.evidence.length&&f.recommendation));}
 });
+
+test('signing local constants and unresolved data flow do not create false blocking findings',()=>{
+  for(const code of [
+    "function sign(body){const bodyHash=crypto.createHash('sha256').update(body).digest('base64url');return {body_hash:bodyHash};}",
+    "function sign(body){const bodyHash=crypto.createHash('sha256').update(body).digest('base64url');const alias=bodyHash;return {body_hash:alias};}",
+    "function sign(body){return {body_hash:crypto.createHash('sha256').update(body).digest('base64url')};}"
+  ])assert.equal(analyze(code,'fixture.cjs',seeds,validate).findings.filter(f=>f.ruleId==='COMMON-SIGN-001').length,0);
+  for(const code of [
+    "function sign(body){return {body_hash:hashBody(body)};}",
+    "function sign(body){let bodyHash=hashBody(body);return {body_hash:bodyHash};}",
+    "function sign(body){const payload='unrelated';try {} catch(payload){return {body_hash:crypto.createHash('sha256').update(payload).digest('base64url')};}}",
+    "function sign(body){const payload='unrelated';try {} catch({payload}){return {body_hash:crypto.createHash('sha256').update(payload).digest('base64url')};}}",
+    "function sign(body){const payload='unrelated';for(const payload of bodies)return {body_hash:crypto.createHash('sha256').update(payload).digest('base64url')};}",
+    "function sign(body){const payload='unrelated';for(const {payload} of bodies){return {body_hash:crypto.createHash('sha256').update(payload).digest('base64url')};}}",
+    "function sign(body){const payload='unrelated';{const {payload}=input;return {body_hash:crypto.createHash('sha256').update(payload).digest('base64url')};}}",
+    "function sign(body){const {payload}=input;return {body_hash:crypto.createHash('sha256').update(payload).digest('base64url')};}"
+  ]){
+    const report=analyze(code,'fixture.cjs',seeds,validate);
+    assert.equal(report.findings.filter(f=>f.ruleId==='COMMON-SIGN-001').length,0,code);
+    assert(report.manual.some(m=>m.ruleId==='COMMON-SIGN-001'&&/unresolved/.test(m.reason)),code);
+  }
+  const wrong="function sign(body){const bodyHash=crypto.createHash('sha256').update('wrong').digest('base64url');return {body_hash:bodyHash};}";
+  assert(analyze(wrong,'fixture.cjs',seeds,validate).findings.some(f=>f.ruleId==='COMMON-SIGN-001'&&f.severity==='P1'));
+});
 test('valid-looking code is not declared fully compliant; comments do not produce findings',()=>{
   const report=analyze("// function retry(){return crypto.randomUUID();}\nconst body={destination_type:'own_account',source_account:'123',destination_account:'456',amount:'600'};",'fixture.cjs',seeds,validate);
   assert.equal(report.findings.length,0);assert(report.manual.length>0);
   assert.equal(analyze('const broken = ;','bad.cjs',seeds,validate).manual.length,1);
 });
-test('review never imports source code and blocks private paths, traversal and secret aliases',t=>{
+test('review never imports source code and blocks private paths and traversal',t=>{
   const d=temp(t);fs.writeFileSync(path.join(d,'safe.cjs'),"throw Error('MUST NOT EXECUTE');");assert.equal(reviewFiles(d,['safe.cjs'],{rules:seeds},validate).length,1);
   for(const name of ['../outside.cjs','exness-custom-key/private.pem','config.local.json','.env.secret','keys.key'])assert.throws(()=>core.publicFile(d,name));
-  fs.writeFileSync(path.join(d,'config.local.json'),'private');try{fs.symlinkSync(path.join(d,'config.local.json'),path.join(d,'alias.cjs'));assert.throws(()=>core.publicFile(d,'alias.cjs'));}catch(e){if(e.code!=='EPERM')throw e;}
+});
+
+test('review blocks aliases to private fixture paths',t=>{
+  const d=temp(t);fs.writeFileSync(path.join(d,'config.local.json'),'sanitized fixture');
+  try{fs.symlinkSync(path.join(d,'config.local.json'),path.join(d,'alias.cjs'));}
+  catch(e){if(!['EPERM','EACCES','ENOTSUP'].includes(e.code))throw e;t.skip('Filesystem links are unavailable in this environment: '+e.code);return;}
+  assert.throws(()=>core.publicFile(d,'alias.cjs'));
 });
 test('schema response and observed response conflicts remain separate evidence, including unsafe IDs',()=>{
   const raw=sourceFixture('payments-spec');

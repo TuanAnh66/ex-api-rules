@@ -14,6 +14,8 @@ A rule describes a requirement; a check describes one way of finding violations.
 
 Default store: EX_API_RULES_DATA_DIR, otherwise Windows LOCALAPPDATA/ex-api-rules or XDG_STATE_HOME/ex-api-rules (~/.local/state/ex-api-rules on other systems). Override with --data-dir. CLI refuses a store/output inside its installation or submodule.
 
+CLI write guards resolve the nearest existing parent before any creation and recheck individual writes. Runtime destinations must use physical paths: symlink/junction aliases, dangling links, private paths and submodule gitfiles are rejected. Ordinary worktrees with conventional `.git/worktrees/<name>` metadata remain supported; unrecognized gitfiles fail closed. A project cache cannot be redirected by a link, and an installed package does not protect its entire consuming workspace as if it were the tool checkout. These checks do not provide an OS-level guarantee against a concurrent hostile filesystem replacement between check and write.
+
 Store layout: blobs/<prefix>/<SHA-256>, bundles/<artifactSHA>.json, bundles/index.json, candidates/<ID>, approvals/<ID>.json, maintainer-active.json, cache/checks/<ID>, cache/views/<artifactSHA>, cache/latest-<artifactSHA>.json. Bundle IDs cannot be rebound. Index writes are serialized with an exclusive lock; interrupted writes leave a visible lock requiring maintainer inspection rather than guessing completion. Disposable views are verified against content hashes.
 
 Each target project owns .ex-api-rules.lock.json and .cache/exness-rules reports. Lock selects exact tool version, bundle ID, bundle hash, portable artifact hash, schema version and profile. Two projects can select different bundles and source-check timestamps using one store. A mismatching tool/profile/bundle errors until explicitly pinned. Review never updates the lock.
@@ -21,6 +23,8 @@ Each target project owns .ex-api-rules.lock.json and .cache/exness-rules reports
 ## Migration and distribution
 
 Tool 0.2.0 packages and schema version 2 portable envelopes wrap the original schema version 1 manifest/rules without changing their bytes or bundle hash. Only the exact legacy hash is allowed to lack new lifecycle fields. New approved bundles require lifecycle metadata.
+
+Canonical digests use an explicit manifest algorithm for new collections (`utf16-v1`); absent markers retain the historical `ecmascript-v0` order for both bundle and portable-artifact hashes. See docs/protocol.md. No import or review rewrites an existing bundle or lock to change its algorithm.
 
 Legacy snapshots remain in Git for v0.1.0 compatibility. New snapshots live in external content-addressed storage and portable release assets. Git carries authoring rules, source catalog, release descriptors, citations and review decisions. Importing a release verifies hashes but does not establish trust in its author: obtain assets/checksums from a reviewed maintainer release.
 

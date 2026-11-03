@@ -2,12 +2,13 @@
 const fs=require('node:fs'),path=require('node:path');
 const {hash,stringify,readJSON,writeJSON,verifyBundle,publicFile,safePath}=require('./legacy-core.cjs');
 const {fetchSources,compareSources}=require('./collector.cjs');
+const writes=require('./write-path.cjs');
 const idNow=()=>new Date().toISOString().replace(/[:.]/g,'-')+'-'+require('node:crypto').randomUUID().slice(0,8);
 function layout(root){const base=path.join(root,'knowledge/exness');return {base,candidates:path.join(base,'candidates'),versions:path.join(base,'versions'),cache:path.join(root,'.cache/exness-rules'),active:path.join(base,'active.json')};}
 function loadActive(root){const l=layout(root),active=readJSON(l.active);if(!/^v-[a-zA-Z0-9-]+$/.test(active.version))throw Error('Invalid active version');const dir=safePath(l.versions,active.version);return {...verifyBundle(dir),active,dir};}
 async function collect(root,{fetcher=fetch}={}){
   const l=layout(root),id=idNow(),dir=path.join(l.candidates,id);
-  fs.mkdirSync(dir,{recursive:true});
+  writes.mkdir(dir);
   const catalog=readJSON(path.join(l.base,'source-catalog.json'));
   const sources=await fetchSources(catalog,dir,fetcher);
   const seeds=readJSON(path.join(l.base,'rule-seeds.json'));
@@ -18,7 +19,7 @@ async function collect(root,{fetcher=fetch}={}){
       if(!localEvidence.startsWith('archive/')||!localEvidence.endsWith('.sanitized.json'))throw Error('Only sanitized archive evidence can be imported');
       const raw=fs.readFileSync(publicFile(root,localEvidence)),data=JSON.parse(raw);
       if(data.referenceOnly!==true||data.runtimeUsable!==false)throw Error('Evidence is not marked reference-only');
-      const snapshot='evidence/'+hash(raw)+'.json';fs.mkdirSync(path.join(dir,'evidence'),{recursive:true});fs.writeFileSync(safePath(dir,snapshot),raw);
+      const snapshot='evidence/'+hash(raw)+'.json';writes.mkdir(path.join(dir,'evidence'));writes.writeFile(safePath(dir,snapshot),raw);
       rule.evidence=[{originalPath:localEvidence,snapshot,sha256:hash(raw)}];
     }
     return {...rule,verification:rule.kind==='documented'?'source-anchored-requires-review':rule.kind==='observed'?'case-specific':'unconfirmed-not-enforced'};
@@ -42,25 +43,25 @@ function approveUnlocked(root,id,reviewedBy){
   if(!/^[a-zA-Z0-9-]+$/.test(id))throw Error('Invalid candidate ID');
   const l=layout(root),source=safePath(l.candidates,id),bundle=verifyBundle(source);
   const version='v-'+id+'-'+bundle.manifest.bundleHash.slice(0,12),target=path.join(l.versions,version);
-  fs.mkdirSync(l.versions,{recursive:true});
+  writes.mkdir(l.versions);
   if(!fs.existsSync(target)){
     // Copy verified bytes, never arbitrary extra files or symlinks in a candidate directory.
-    fs.mkdirSync(target);
-    for(const sourceRecord of bundle.manifest.sources){const to=safePath(target,sourceRecord.snapshot);fs.mkdirSync(path.dirname(to),{recursive:true});fs.copyFileSync(safePath(source,sourceRecord.snapshot),to);}
-    for(const r of bundle.rules)for(const e of r.evidence)if(e.snapshot){const to=safePath(target,e.snapshot);fs.mkdirSync(path.dirname(to),{recursive:true});fs.copyFileSync(safePath(source,e.snapshot),to);}
+    writes.mkdir(target);
+    for(const sourceRecord of bundle.manifest.sources){const to=safePath(target,sourceRecord.snapshot);writes.mkdir(path.dirname(to));writes.copyFile(safePath(source,sourceRecord.snapshot),to);}
+    for(const r of bundle.rules)for(const e of r.evidence)if(e.snapshot){const to=safePath(target,e.snapshot);writes.mkdir(path.dirname(to));writes.copyFile(safePath(source,e.snapshot),to);}
     writeJSON(path.join(target,'manifest.json'),bundle.manifest);writeJSON(path.join(target,'rules.json'),bundle.rules);
   }
   verifyBundle(target);
   const approval={version,candidate:id,bundleHash:bundle.manifest.bundleHash,approvedAt:new Date().toISOString(),reviewedBy};
   writeJSON(path.join(l.base,'approvals',idNow()+'.json'),approval);
   // Active pointer replacement is atomic; all referenced snapshots already exist.
-  writeJSON(l.active+'.tmp',approval);fs.renameSync(l.active+'.tmp',l.active);
+  writeJSON(l.active+'.tmp',approval);fs.renameSync(writes.assertRuntimePath(l.active+'.tmp'),writes.assertRuntimePath(l.active));
   return approval;
 }
 function approve(root,id,reviewedBy){
   const lock=path.join(layout(root).base,'approval.lock');
-  const fd=fs.openSync(lock,'wx');
-  try{return approveUnlocked(root,id,reviewedBy);}finally{fs.closeSync(fd);fs.unlinkSync(lock);}
+  const fd=fs.openSync(writes.assertRuntimePath(lock),'wx');
+  try{return approveUnlocked(root,id,reviewedBy);}finally{fs.closeSync(fd);fs.unlinkSync(writes.assertRuntimePath(lock));}
 }
 async function checkUpdates(root,{fetcher=fetch}={}){
   const baseline=loadActive(root),l=layout(root),id=idNow(),dir=path.join(l.cache,'checks',id);

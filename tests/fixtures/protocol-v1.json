@@ -2,5 +2,25 @@
   "description": "Language-neutral canonicalization and profile vectors; decimal quantities are strings.",
   "input": {"z": [true, null, "600.00"], "a": {"n": 7, "b": "USC"}},
   "canonical": "{\"a\":{\"b\":\"USC\",\"n\":7},\"z\":[true,null,\"600.00\"]}",
+  "canonicalCases": [
+    {
+      "name": "integer keys",
+      "input": {"2":"two","10":"ten"},
+      "canonical": "{\"10\":\"ten\",\"2\":\"two\"}",
+      "legacyCanonical": "{\"2\":\"two\",\"10\":\"ten\"}"
+    },
+    {
+      "name": "nested integer keys",
+      "input": {"z":[{"2":"two","10":"ten"}],"10":"root","2":"root"},
+      "canonical": "{\"10\":\"root\",\"2\":\"root\",\"z\":[{\"10\":\"ten\",\"2\":\"two\"}]}",
+      "legacyCanonical": "{\"2\":\"root\",\"10\":\"root\",\"z\":[{\"2\":\"two\",\"10\":\"ten\"}]}"
+    },
+    {
+      "name": "array index boundary and UTF-16 ordering",
+      "input": {"4294967295":"last","4294967294":"index","01":"zero-one","0":"zero","\ud83d\ude00":"astral","\ue000":"bmp"},
+      "canonical": "{\"0\":\"zero\",\"01\":\"zero-one\",\"4294967294\":\"index\",\"4294967295\":\"last\",\"\ud83d\ude00\":\"astral\",\"\ue000\":\"bmp\"}",
+      "legacyCanonical": "{\"0\":\"zero\",\"4294967294\":\"index\",\"01\":\"zero-one\",\"4294967295\":\"last\",\"\ud83d\ude00\":\"astral\",\"\ue000\":\"bmp\"}"
+    }
+  ],
   "unsupported": {"file": "client.py", "content": "raise RuntimeError('must never execute')\n", "adapter": "unsupported"}
 }

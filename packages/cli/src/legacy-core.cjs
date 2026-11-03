@@ -2,6 +2,7 @@
 const fs=require('node:fs'),path=require('node:path'),crypto=require('node:crypto');
 const YAML=require('yaml'),cheerio=require('cheerio');
 const pure=require('ex-api-rules-core');
+const writes=require('./write-path.cjs');
 const hash=pure.hash;
 function canonical(value){
   if(Array.isArray(value))return value.map(canonical);
@@ -9,10 +10,36 @@ function canonical(value){
   return value;
 }
 const stringify=value=>JSON.stringify(canonical(value));
-function withoutExamples(value){
-  if(Array.isArray(value))return value.map(withoutExamples);
-  if(value&&typeof value==='object')return Object.fromEntries(Object.entries(value).filter(([k])=>!['example','examples','externalDocs'].includes(k)).map(([k,v])=>[k,withoutExamples(v)]));
-  return value;
+// Only follow typed OpenAPI/JSON Schema edges. Dictionary names and literal
+// data (const/enum/default, extensions, etc.) are never annotation keywords.
+const children={
+  openapi:{paths:'patterned:pathItem',webhooks:'map:pathItem',components:'components',tags:'array:tag'},
+  components:{schemas:'map:schema',parameters:'map:parameter',headers:'map:parameter',responses:'map:response',requestBodies:'map:requestBody',callbacks:'map:callback',pathItems:'map:pathItem'},
+  pathItem:{get:'operation',put:'operation',post:'operation',delete:'operation',options:'operation',head:'operation',patch:'operation',trace:'operation',parameters:'array:parameter'},
+  operation:{parameters:'array:parameter',requestBody:'requestBody',responses:'patterned:response',callbacks:'map:callback'},
+  parameter:{schema:'schema',content:'map:media'},
+  requestBody:{content:'map:media'},
+  response:{headers:'map:parameter',content:'map:media'},
+  media:{schema:'schema',encoding:'map:encoding'},
+  encoding:{headers:'map:parameter'},
+  schema:Object.fromEntries([
+    ...['properties','patternProperties','$defs','definitions','dependentSchemas','dependencies'].map(k=>[k,'map:schema']),
+    ...['items','additionalItems','additionalProperties','unevaluatedItems','unevaluatedProperties','contains','not','if','then','else','propertyNames','contentSchema'].map(k=>[k,'schema']),
+    ...['allOf','anyOf','oneOf','prefixItems'].map(k=>[k,'array:schema'])
+  ])
+};
+const annotations={openapi:['externalDocs'],operation:['externalDocs'],tag:['externalDocs'],components:['examples'],schema:['example','examples','externalDocs'],parameter:['example','examples'],media:['example','examples']};
+function withoutExamples(value,context='openapi'){
+  if(!value||typeof value!=='object')return value;
+  if(context.startsWith('array:'))return Array.isArray(value)?value.map(v=>withoutExamples(v,context.slice(6))):value;
+  if(Array.isArray(value))return value;
+  // Patterned OpenAPI objects admit x-* specification extensions. Plain
+  // named maps do not: an x-* schema/property/component name is still typed.
+  if(context.startsWith('patterned:'))return Object.fromEntries(Object.entries(value).map(([k,v])=>[k,k.startsWith('x-')?v:withoutExamples(v,context.slice(10))]));
+  if(context.startsWith('map:'))return Object.fromEntries(Object.entries(value).map(([k,v])=>[k,withoutExamples(v,context.slice(4))]));
+  if(context==='callback')return withoutExamples(value,'patterned:pathItem');
+  const edges=children[context]||{};
+  return Object.fromEntries(Object.entries(value).filter(([k])=>!annotations[context]?.includes(k)).map(([k,v])=>[k,Object.hasOwn(edges,k)?withoutExamples(v,edges[k]):v]));
 }
 function normalize(raw,kind){
   const text=Buffer.isBuffer(raw)?raw.toString('utf8'):raw;
@@ -52,7 +79,7 @@ function pointer(document,ref){
 }
 function validator(raw,schemaName){return pure.openApiValidator(normalize(raw,'openapi').document,schemaName);}
 function readJSON(file){return JSON.parse(fs.readFileSync(file,'utf8'));}
-function writeJSON(file,value){fs.mkdirSync(path.dirname(file),{recursive:true});fs.writeFileSync(file,JSON.stringify(value,null,2)+'\n');}
+function writeJSON(file,value){writes.mkdir(path.dirname(file));writes.writeFile(file,JSON.stringify(value,null,2)+'\n');}
 function safePath(root,relative){
   const abs=path.resolve(root,relative),rel=path.relative(root,abs);
   if(!rel||rel.startsWith('..')||path.isAbsolute(rel))throw Error('Path outside allowed directory');return abs;
@@ -76,7 +103,7 @@ function verifyBundle(dir){
     if(hash(raw)!==source.sha256)throw Error('Source digest mismatch: '+source.id);
     normalize(raw,source.kind);
   }
-  const digest=hash(stringify({sources:manifest.sources,rules}));
+  const digest=hash(pure.bundleStringify(manifest,{sources:manifest.sources,rules}));
   if(digest!==manifest.bundleHash)throw Error('Bundle digest mismatch');
   for(const rule of rules){
     if(!['documented','observed','inference'].includes(rule.kind)||!['common','payments','trading'].includes(rule.scope)||!rule.id||!rule.statement||!rule.evidence?.length)throw Error('Invalid rule');

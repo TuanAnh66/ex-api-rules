@@ -2,6 +2,7 @@
 const fs=require('node:fs'),path=require('node:path'),{execFileSync}=require('node:child_process');
 const core=require('ex-api-rules-core'),legacy=require('./legacy-core.cjs'),store=require('./store.cjs');
 const {reviewFiles}=require('./review-files.cjs');
+const writes=require('./write-path.cjs');
 const packageRoot=path.resolve(__dirname,'..');
 function parse(args){
   const [command,...rest]=args,result={command,files:[]};
@@ -16,9 +17,8 @@ function parse(args){
   return result;
 }
 function context(options={},defaults={}){
-  const distributionRoot=path.resolve(defaults.distributionRoot||packageRoot),projectRoot=fs.realpathSync(path.resolve(options['project-root']||defaults.defaultProjectRoot||process.cwd()));
-  const dataDir=path.resolve(options['data-dir']||store.defaultDataDir());
-  if(store.within(distributionRoot,dataDir)||store.within(packageRoot,dataDir))throw Error('Data directory must be outside the installed tool/repository');
+  const distributionRoot=fs.realpathSync(path.resolve(defaults.distributionRoot||packageRoot)),projectRoot=fs.realpathSync(path.resolve(options['project-root']||defaults.defaultProjectRoot||process.cwd()));
+  const dataDir=writes.assertRuntimePath(options['data-dir']||store.defaultDataDir(),{forbiddenRoots:[distributionRoot,packageRoot]});
   return {projectRoot,distributionRoot,store:store.createStore(dataDir)};
 }
 function git(root,args){return execFileSync('git',['-c','safe.directory='+root,...args],{cwd:root,encoding:'utf8',maxBuffer:8*1024*1024,stdio:['ignore','pipe','pipe']});}
@@ -44,7 +44,7 @@ function review(root,options={},distributionRoot=packageRoot){
   let latestCheck=null;try{const check=legacy.readJSON(path.join(ctx.store.root,'cache','latest-'+bundle.artifactSha256+'.json'));latestCheck={checkedAt:check.checkedAt,status:check.status,summary:check.summary};}catch(e){if(e.code!=='ENOENT')throw e;}
   const registry=legacy.readJSON(path.join(store.resources(distributionRoot).catalog,'checks.json'));
   const ruleVersion=bundle.manifest.bundleHash===store.LEGACY_HASH?'v-'+bundle.manifest.id+'-'+bundle.manifest.bundleHash.slice(0,12):bundle.manifest.id;
-  const report={schemaVersion:1,createdAt:new Date().toISOString(),toolVersion:core.VERSION,ruleVersion,bundleId:bundle.manifest.id,bundleHash:bundle.manifest.bundleHash,artifactSha256:bundle.artifactSha256,profile,projectLock:lock?'pinned':'legacy-compatibility-unlocked',
+  const report={schemaVersion:1,createdAt:new Date().toISOString(),toolVersion:core.VERSION,ruleVersion,bundleId:bundle.manifest.id,bundleHash:bundle.manifest.bundleHash,artifactSha256:bundle.artifactSha256,bundleCanonicalization:bundle.manifest.canonicalization||'ecmascript-v0',fingerprintCanonicalization:'utf16-v1',profile,projectLock:lock?'pinned':'legacy-compatibility-unlocked',
     codeVersion:{head,files:results.map(r=>({file:r.file,sha256:r.sha256,adapter:r.adapter}))},
     sourceFreshness:{mode:'offline-pinned-snapshot',collectedAt:bundle.manifest.collectedAt,latestCheck,latestClaim:false},
     outcome:'PARTIAL_REVIEW_REQUIRES_HUMAN',findings:results.flatMap(r=>r.findings),manualChecks:[...excluded,...results.flatMap(r=>r.manual)],
@@ -56,9 +56,7 @@ function review(root,options={},distributionRoot=packageRoot){
 }
 function outputPath(ctx,relative){
   const target=path.resolve(ctx.projectRoot,relative),cache=path.join(ctx.projectRoot,'.cache/exness-rules');
-  if(!store.within(cache,target)&&!store.within(ctx.store.root,target))throw Error('--out must be in project .cache/exness-rules or external data directory');
-  if(store.within(ctx.distributionRoot,target)||store.within(packageRoot,target))throw Error('Runtime output cannot modify the tool installation');
-  return target;
+  return writes.assertRuntimePath(target,{allowedRoots:[cache,ctx.store.root],forbiddenRoots:[ctx.distributionRoot,packageRoot]});
 }
 async function main(args,defaults={}){
   const options=parse(args);

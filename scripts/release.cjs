@@ -13,7 +13,7 @@ if(args.includes('--checksums')){
   const portable=index>=0?JSON.parse(fs.readFileSync(path.resolve(args[index+1]))):store.portableFromDirectory(path.join(root,'knowledge/exness/versions',legacy.version));
   const verified=core.verifyPortable(portable);if(portable.rules.some(r=>['draft','in_review'].includes(r.lifecycle?.status)))throw Error('Cannot release draft rules');
   const bundleName=index>=0?'exness-bundle-'+portable.manifest.id+'.json':'exness-bundle-v0.1.0.json';
-  fs.writeFileSync(path.join(dist,bundleName),core.stringify(portable)+'\n');
+  fs.writeFileSync(path.join(dist,bundleName),core.bundleStringify(portable.manifest,portable)+'\n');
   const contracts={schemaVersion:1,schemas:Object.fromEntries(fs.readdirSync(path.join(root,'schemas')).filter(f=>f.endsWith('.json')).sort().map(f=>[f,JSON.parse(fs.readFileSync(path.join(root,'schemas',f)))])),fixtures:{'protocol-v1.json':require('../tests/fixtures/protocol-v1.json')}};
   fs.writeFileSync(path.join(dist,'ex-api-rules-contracts-'+core.VERSION+'.json'),core.stringify(contracts)+'\n');
   let revision='unavailable';try{revision=execFileSync('git',['rev-parse','HEAD'],{cwd:root,encoding:'utf8'}).trim();}catch{}

@@ -1,6 +1,7 @@
 'use strict';
 const fs=require('node:fs'),path=require('node:path');
 const {hash,normalize,classify,writeJSON,readJSON,safePath}=require('./legacy-core.cjs');
+const writes=require('./write-path.cjs');
 function allowed(url,catalog){
   const u=new URL(url);
   if(u.protocol!=='https:'||u.username||u.password||u.port||!catalog.allowedHosts.includes(u.hostname))throw Error('URL is not an allowed public documentation source');
@@ -34,7 +35,7 @@ async function fetchSources(catalog,directory,fetcher=fetch){
         const {raw,...meta}=await download(source.url,catalog,fetcher);downloaded=true;
         const parsed=normalize(raw,source.kind),sha256=hash(raw);
         const snapshot='sources/'+sha256+(source.kind==='openapi'?'.yaml':'.html');
-        fs.mkdirSync(path.join(directory,'sources'),{recursive:true});fs.writeFileSync(safePath(directory,snapshot),raw);
+        writes.mkdir(path.join(directory,'sources'));writes.writeFile(safePath(directory,snapshot),raw);
         return {record:{...source,...meta,fetchedAt:new Date().toISOString(),sha256,snapshot},links:source.discover?parsed.links||[]:[]};
       }catch(e){return {record:{...source,fetchedAt:new Date().toISOString(),error:e.message,failureType:e.failureType||(downloaded?'parse-error':'fetch-error')},links:[]};}
     }));
