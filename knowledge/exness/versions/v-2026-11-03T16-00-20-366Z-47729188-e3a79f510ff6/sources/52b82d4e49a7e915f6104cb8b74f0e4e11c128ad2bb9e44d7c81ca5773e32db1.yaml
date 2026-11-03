@@ -1,0 +1,1177 @@
+openapi: 3.1.1
+
+info:
+  title: Exness Payments API
+  version: 1.0.0
+  description: |
+
+    Core concepts:
+    - Transfer = movement of funds between Exness accounts: from a client's account
+      either to another account of the same client (`destination_type: own_account`)
+      or to an account of another client (`destination_type: another_client`)
+    - Every created transfer is identified by `transfer_id`; its status is available
+      through `GET /v1/transfers/{transfer_id}` to its sender and its recipient —
+      to any of their API keys whose scopes cover the transfer type, not only to
+      the key that created it
+    - Account balance and transfer status are available through read operations
+    - Transfers cannot be cancelled or reversed through the API. Check the destination
+      account before sending. If a transfer was sent to a wrong account, contact
+      Customer Support
+
+    General API rules:
+
+    Authorization:
+    - The Exness Payments API authenticates requests by request signing with a public API key.
+    - Signed requests use the `EXN-*` headers documented in the security schemes.
+    - `EXN-DATA` contains a base64url-encoded JSON payload with the fields that are signed.
+    - `EXN-SIGN` contains the Ed25519 signature of the decoded `EXN-DATA` payload.
+    - `EXN-DATA` and `EXN-SIGN` must use base64url without `=` padding.
+    - `EXN-SIGN-VERSION` must be `1`.
+    - The signed payload must contain:
+      - `api_key`: same value as `EXN-API-KEY`
+      - `idempotency_key`: same value as `EXN-IDEMPOTENCY-KEY`; empty string for signed `GET` requests
+      - `timestamp`: Unix time in milliseconds, same value as `EXN-TIMESTAMP`
+      - `sign_version`: same value as `EXN-SIGN-VERSION`
+      - `method`: uppercase HTTP method, for example `POST`
+      - `path`: request path with query string exactly as sent by the client
+      - `body_hash`: SHA-256 hash of the request body, base64url-encoded without padding
+    - `EXN-SIGN` signs the decoded `EXN-DATA` payload bytes, not the base64url string.
+    - For requests without a body, `body_hash` is the SHA-256 hash of the empty string, base64url-encoded without padding.
+    - Query strings must be signed exactly as transmitted. Clients must not reorder or re-encode query parameters after signing.
+    - Duplicate query parameters are rejected.
+    - The request timestamp must be within the accepted time window around the server
+      time; the window size is provided with your API credentials. Clients should
+      generate a fresh signature for every request.
+    - The API key must be allowed to access the requested account, source IP, and operation scope.
+      A request outside the scopes of your API key, or from a source IP that is not
+      allowed for it, is rejected with `AUTH_PERMISSION_DENIED`. An account that is not
+      available to your API key is always reported as `ACCOUNT_NOT_FOUND`, the same as
+      an account that does not exist.
+    - API key scopes for this API:
+      - `Internal transfers`: transfers between your own accounts
+        (`destination_type: own_account`), account balance, and transfer status
+      - `Partner transfers`: transfers from your Partner Reward Wallet to another
+        Exness client (`destination_type: another_client`), account balance, and
+        transfer status
+    - A transfer creation request that is not covered by the scopes of your API key
+      is rejected with `AUTH_PERMISSION_DENIED`. A transfer whose type is not covered
+      by the scopes of your API key is reported as `TRANSFER_NOT_FOUND`.
+    - Authentication headers are modeled as OpenAPI security schemes, not as ordinary operation parameters.
+    - Signed-request errors (`AUTH_INVALID_API_KEY`, `AUTH_INVALID_SIGNATURE`) are common to
+      all Exness APIs; the cases that cause them are described in the Request signing
+      section of the Exness API documentation.
+    - Authentication errors use the public error model. Clients should use `code` and `error_message`
+      as the stable contract and must not rely on human-readable text.
+
+    Signed POST example (the request body, sent exactly as these bytes):
+    ```http
+    POST /v1/transfers HTTP/1.1
+    EXN-API-KEY: your-api-key
+    EXN-IDEMPOTENCY-KEY: 0f8fad5b-d9cb-469f-a165-70867728950e
+    EXN-TIMESTAMP: 1787576070123
+    EXN-SIGN-VERSION: 1
+    EXN-DATA: <base64url_encoded_payload>
+    EXN-SIGN: <base64url_encoded_signature>
+    Content-Type: application/json
+
+    {"destination_type":"own_account","source_account":"8066808","destination_account":"9484938209348","amount":"100.00"}
+    ```
+
+    Decoded `EXN-DATA` payload for the signed POST:
+    ```json
+    {
+      "api_key": "your-api-key",
+      "idempotency_key": "0f8fad5b-d9cb-469f-a165-70867728950e",
+      "timestamp": 1787576070123,
+      "sign_version": 1,
+      "method": "POST",
+      "path": "/v1/transfers",
+      "body_hash": "1LVQQ9_kd766kYfgSbEEoHrcOkx9Kcl08gT0AYMMolg"
+    }
+    ```
+
+    `body_hash` is the SHA-256 hash of the exact request body bytes as sent
+    (the minified JSON body shown above), base64url-encoded without padding.
+    For requests without a body it is the hash of the empty string.
+
+    Signed GET example:
+    ```http
+    GET /v1/accounts/8066808/balance HTTP/1.1
+    EXN-API-KEY: your-api-key
+    EXN-IDEMPOTENCY-KEY:
+    EXN-TIMESTAMP: 1787576070123
+    EXN-SIGN-VERSION: 1
+    EXN-DATA: <base64url_encoded_payload>
+    EXN-SIGN: <base64url_encoded_signature>
+    ```
+
+    Decoded `EXN-DATA` payload for the signed GET:
+    ```json
+    {
+      "api_key": "your-api-key",
+      "idempotency_key": "",
+      "timestamp": 1787576070123,
+      "sign_version": 1,
+      "method": "GET",
+      "path": "/v1/accounts/8066808/balance",
+      "body_hash": "47DEQpj8HBSa-_TImW-5JCeuQeRkm5NMpJWZG3hSuFU"
+    }
+    ```
+
+    Transfer destination:
+    - every transfer states whose account the money goes to, using the required
+      `destination_type` field: `own_account` for your own account,
+      `another_client` for an account of another Exness client
+    - for `own_account`, the source and destination must be different accounts; the
+      same account in both fields is rejected with `REQUEST_INVALID_PARAMETERS`
+    - `destination_type` must match the destination account. If it does not —
+      for example, `own_account` is sent with an account that is not yours —
+      the API responds with `ACCOUNT_NOT_FOUND`, the same answer as for an
+      account that does not exist
+    - transfers to another client are available to partners whose API key has the
+      `Partner transfers` scope, and are always sent from the Partner Reward
+      Wallet; any other source account is
+      rejected with `TRANSFER_SOURCE_NOT_ALLOWED`
+    - the destination can be a trading account on the Exness platform or a wallet;
+      MT4/MT5 accounts are not supported as a source or a destination and are
+      rejected with `TRANSFER_MT_ACCOUNT_NOT_SUPPORTED`; some account combinations
+      are not supported and are rejected with `TRANSFER_NOT_SUPPORTED` or
+      `TRANSFER_DESTINATION_NOT_SUPPORTED`
+    - a transfer to another client can be declined by eligibility checks with
+      `OPERATION_NOT_ALLOWED`
+
+    Monetary values and numeric precision:
+    - amounts are represented as positive fixed-point decimal strings, for example `"100.00"`
+    - amounts are expressed in the currency of the source account
+    - excessive decimal precision is rejected, not rounded
+    - when the source and destination accounts use different currencies, the amount
+      is converted at execution; the creation response returns the amount of the
+      transfer in the source account currency (`source`) and in the destination
+      account currency (`destination`)
+    - account balances are returned as non-negative decimal strings in the account
+      currency; the balance is the amount available for transfers from the account
+
+    Idempotency:
+    - every request that creates a transfer requires an idempotency key
+    - signed requests use `EXN-IDEMPOTENCY-KEY`
+    - for signed `GET` requests, `EXN-IDEMPOTENCY-KEY` must be present with an empty value,
+      and the signed `idempotency_key` field must be an empty string
+    - clients should use the same idempotency key when safely retrying the same request
+    - retrying with the same key and an identical request never executes the transfer
+      twice. The request goes through the checks of the source account, funds, limits,
+      and eligibility before the key is looked up. If it passes them, the API returns
+      `201` with the original `transfer_id`, whatever the current status of the
+      transfer. The amounts in that response are calculated for the retry and can
+      differ from the amounts of the transfer, for example after an exchange rate
+      change; the transfer itself does not change. Its amounts are shown in
+      Transaction History. If it fails them, the API returns
+      that error even though the transfer exists: for example,
+      `TRANSFER_INSUFFICIENT_FUNDS` after the first transfer has used the funds
+    - an identical request has the same source account, destination account, and
+      amount; amounts are compared as numbers, so `100` and `100.00` are the same.
+      Reusing a key with a different source account, destination account, or amount
+      is rejected with `REQUEST_IDEMPOTENCY_KEY_REUSED`
+    - idempotency keys are unique per client: a key is bound to your transfer
+      regardless of which of your API keys sent the request
+    - idempotency keys do not expire: a key used to create a transfer stays bound to
+      that transfer, so retrying the identical request with the same key never
+      executes it twice, at any time
+    - an error response of this API is a JSON body whose `code` and `error_message`
+      are a pair from the public error codes of this API. Any other response — for
+      example an HTML page, or a JSON body from a proxy or load balancer — is a non-API response and counts as
+      no response
+    - before you send a request with the key, record durably, together with the key,
+      the request, and the time of the attempt, that the request is being sent. If the
+      record cannot be written, do not send the request. Until you record the answer,
+      the outcome of the request is unknown, even if your system stops while the
+      request is in flight. Send the requests of one transfer from one sender at a time
+    - after `TRANSFER_OUTCOME_UNKNOWN`, `SYSTEM_INTERNAL_ERROR`,
+      `SYSTEM_TEMPORARY_UNAVAILABLE`, a non-API response, or no response, the outcome is unknown, and the key stays reserved for this
+      transfer in every later attempt, including after a restart of your system (see
+      Recovery after an unknown outcome)
+    - while no request sent with the key has had an unknown outcome, any other error
+      response of this API means that this request created no transfer. Except after
+      `REQUEST_IDEMPOTENCY_KEY_REUSED`, the key is not bound and can be reused, for
+      example after you fix the request
+    - if you stop sending a transfer for any reason other than a `201`, retire its key
+      first: record durably that the key is never sent again, so that no restart or
+      pending resend sends it
+    - `REQUEST_IDEMPOTENCY_KEY_REUSED` means that the key is already bound to a
+      transfer created by a different request
+    - to try again after a transfer is `rejected`, send a new request with a new
+      idempotency key; the old key stays bound to the rejected transfer
+    - the idempotency key must be a UUID in its canonical text form, for example
+      `0f8fad5b-d9cb-469f-a165-70867728950e`; generate a new random UUID for every
+      new transfer
+    - a creation request without an idempotency key, or with a key that is not a
+      valid UUID, is rejected with `REQUEST_INVALID_PARAMETERS`
+
+    Transfer processing:
+    - the creation request is processed synchronously: the response contains either
+      the created transfer (`transfer_id` and the transfer amounts) or an error
+    - a created transfer can still be in the `processing` status; its final status
+      (`done` or `rejected`) is available through `GET /v1/transfers/{transfer_id}`
+    - transfers usually complete within a few seconds; the processing time is not
+      guaranteed and can vary with load
+    - the API returns the transfer status only; for the details of a transfer that is
+      not `done`, see Transaction History in the Payments & wallet section of your
+      Personal Area
+
+    Error handling:
+    - each error response contains exactly one error; `code` and `error_message` are the stable
+      machine-readable contract, and `description` is a short human-readable hint that may change
+      without notice
+    - public errors are non-retryable by default; do not retry automatically unless the
+      documentation for the specific code says otherwise
+    - `SYSTEM_TEMPORARY_UNAVAILABLE` and `SYSTEM_INTERNAL_ERROR` may be retried with exponential
+      backoff, reusing the same idempotency key for the same request
+    - `TRANSFER_OUTCOME_UNKNOWN`: resend the exact same request with the same
+      idempotency key (see Recovery after an unknown outcome)
+    - `TRANSFER_LIMIT_REACHED` may be retried later; changing the amount does not help
+    - `REQUEST_RATE_LIMIT` is returned for Public API endpoint quota limits; wait before sending
+      another request
+
+    Recovery after an unknown outcome:
+    - the outcome is unknown after `TRANSFER_OUTCOME_UNKNOWN`, `SYSTEM_INTERNAL_ERROR`,
+      `SYSTEM_TEMPORARY_UNAVAILABLE`, a non-API response, or no response at all
+      (timeout, connection loss). The transfer may exist, and
+      it may still be created or completed after you received the response
+    - resend the exact same request with the same idempotency key, with exponential
+      backoff, within your retry budget. A `201` response resolves the outcome: it
+      returns the transfer created by an earlier attempt without executing it again,
+      or the transfer created by this retry
+    - after `AUTH_INVALID_API_KEY`, `AUTH_INVALID_SIGNATURE`, `AUTH_PERMISSION_DENIED`,
+      or `REQUEST_RATE_LIMIT` on a retry, fix the cause — the API key, the signature,
+      the scopes or allowed IPs of your API key, or the request rate — and resend the
+      same request with the same key
+    - any other error on a retry does not show whether a transfer exists, because the
+      checks of the source account, funds, limits, and eligibility run before the key
+      is looked up. Do not change the request or the key to get past the error
+    - when you stop resending without a `201` — after such an error, or when your retry
+      budget is spent — retire the key first: record durably that it is never sent
+      again, so that no restart or pending resend sends it. Only then check
+      Transaction History in the Payments & wallet section of your Personal Area. A
+      created transfer appears there shortly after it is created, including while it
+      is `processing`. If it is not there, wait a few minutes after your last attempt
+      and check again
+    - Transaction History does not show the idempotency key. Recognize the transfer by
+      its source and destination accounts, amount, and time; the time shown can be
+      later than the time of your attempt. If the transfer is there, it was created —
+      do not send it again
+    - if it is not there, or several transfers match, contact Customer Support with the
+      source and destination accounts, the amount, and the time of every attempt. A
+      transfer missing from Transaction History does not prove that none will be
+      created: an earlier attempt may still be completing. Customer Support's
+      confirmation that no transfer was created is final: after it, the earlier
+      attempts can no longer create a transfer. Only then send the transfer as a new
+      request with a new key
+    - `TRANSFER_OUTCOME_UNKNOWN` and lost responses do not return a `transfer_id`, so
+      `GET /v1/transfers/{transfer_id}` cannot be used to recover them; it needs the
+      `transfer_id` from a `201` response
+    - `TRANSFER_NOT_FOUND` means the transfer is not visible to your API key: it does
+      not exist, you are neither its sender nor its recipient, or its type is not
+      covered by the scopes of your API key. It does not prove that no money was moved
+    - never send the transfer again with a new idempotency key while the outcome is
+      unknown; doing so can send the money twice
+
+security:
+  - ExnApiKeyAuth: []
+    ExnTimestampAuth: []
+    ExnDataAuth: []
+    ExnSignatureAuth: []
+    ExnSignVersionAuth: []
+    ExnIdempotencyKeyAuth: []
+
+servers:
+  - url: /
+    description: |
+      The API host is provided during onboarding, together with your API
+      credentials. All paths are relative to that host.
+
+tags:
+  - name: Transfers
+    description: |
+      Transfers between your own accounts (`destination_type: own_account`) or
+      to another Exness client's account (`destination_type: another_client`).
+  - name: Accounts
+    description: Account read operations.
+
+paths:
+  /v1/transfers:
+    post:
+      tags:
+        - Transfers
+      summary: Create a transfer
+      operationId: createTransfer
+      description: |
+        Creates a transfer from one of your accounts to the destination you
+        choose with `destination_type`:
+        - `own_account` — another of your own accounts
+        - `another_client` — an account of another Exness client; available to
+          partners whose API key has the `Partner transfers` scope, and the money
+          is always sent from your Partner Reward Wallet
+
+        Provide only the accounts and the amount, in the currency of the source
+        account. You do not need to specify the currency, payment method, or
+        conversion details — the service determines them from the accounts.
+
+        `destination_type` must match the destination account: if you pass
+        `own_account` with an account that is not yours, or `another_client`
+        with your own account, the API responds with `ACCOUNT_NOT_FOUND` — the
+        same answer as for an account that does not exist.
+
+        The request is processed synchronously: the response contains either the
+        created transfer — its `transfer_id` plus the transfer amount in the
+        source account currency (`source`) and in the destination account
+        currency (`destination`) — or an error. A created transfer can
+        still be in the `processing` status; check its final status with
+        `GET /v1/transfers/{transfer_id}`.
+
+        A created transfer cannot be cancelled or reversed through the API. Check
+        the destination account before sending. If a transfer was sent to a wrong
+        account, contact Customer Support.
+
+        The operation is idempotent. Reuse the same `EXN-IDEMPOTENCY-KEY` when
+        retrying the same request.
+
+        Recovery rules:
+        - after `TRANSFER_OUTCOME_UNKNOWN`, `SYSTEM_INTERNAL_ERROR`,
+          `SYSTEM_TEMPORARY_UNAVAILABLE`, a non-API response, or no response, the
+          outcome is unknown: resend the same request with the same idempotency
+          key. A `201` returns the existing transfer without executing it again,
+          or the transfer created by the retry
+        - before each request, record durably that it is being sent; if your
+          system stops before it records the answer, the outcome is unknown
+        - after `AUTH_INVALID_API_KEY`, `AUTH_INVALID_SIGNATURE`,
+          `AUTH_PERMISSION_DENIED`, or `REQUEST_RATE_LIMIT` on a retry, fix the
+          cause and resend the same request with the same key
+        - any other error on a retry leaves the outcome unknown, because the
+          source account, funds, limits, and eligibility are checked before the key
+          is looked up. Do not change the request or the key
+        - if you stop resending without a `201`, retire the key first: record
+          durably that it is never sent again. Then check Transaction History, and
+          use a new key only after Customer Support confirms that no transfer was
+          created
+        - `TRANSFER_OUTCOME_UNKNOWN` and lost responses do not return a
+          `transfer_id`; `GET /v1/transfers/{transfer_id}` shows the status of a
+          transfer whose `transfer_id` you received in a `201` response
+        - to try again after a transfer is `rejected`, send a new request with a
+          new idempotency key; the old key stays bound to the rejected transfer
+        - transfers are also visible in Transaction History in the Payments &
+          wallet section of your Personal Area
+
+        Possible public error codes:
+        - `REQUEST_INVALID` (400)
+        - `AUTH_INVALID_API_KEY`, `AUTH_INVALID_SIGNATURE` (401)
+        - `AUTH_PERMISSION_DENIED` (403), including a `destination_type` not
+          covered by the scopes of your API key
+        - `TRANSFER_SOURCE_NOT_ALLOWED` (403, `destination_type: another_client` only)
+        - `ACCOUNT_NOT_FOUND` (404)
+        - `REQUEST_IDEMPOTENCY_KEY_REUSED`, `TRANSFER_INSUFFICIENT_FUNDS` (409)
+        - `REQUEST_INVALID_PARAMETERS`, `TRANSFER_NOT_SUPPORTED`,
+          `TRANSFER_DESTINATION_NOT_SUPPORTED`, `OPERATION_NOT_ALLOWED`,
+          `TRANSFER_AMOUNT_TOO_SMALL`, `TRANSFER_AMOUNT_TOO_LARGE`,
+          `TRANSFER_LIMIT_REACHED`, `TRANSFER_MT_ACCOUNT_NOT_SUPPORTED` (422)
+        - `REQUEST_RATE_LIMIT` (429)
+        - `SYSTEM_INTERNAL_ERROR`, `TRANSFER_OUTCOME_UNKNOWN` (500)
+        - `SYSTEM_TEMPORARY_UNAVAILABLE` (503)
+      x-public-error-codes:
+        - REQUEST_INVALID
+        - REQUEST_INVALID_PARAMETERS
+        - AUTH_INVALID_API_KEY
+        - AUTH_INVALID_SIGNATURE
+        - AUTH_PERMISSION_DENIED
+        - ACCOUNT_NOT_FOUND
+        - REQUEST_IDEMPOTENCY_KEY_REUSED
+        - TRANSFER_NOT_SUPPORTED
+        - TRANSFER_DESTINATION_NOT_SUPPORTED
+        - TRANSFER_SOURCE_NOT_ALLOWED
+        - OPERATION_NOT_ALLOWED
+        - TRANSFER_INSUFFICIENT_FUNDS
+        - TRANSFER_AMOUNT_TOO_SMALL
+        - TRANSFER_AMOUNT_TOO_LARGE
+        - TRANSFER_LIMIT_REACHED
+        - TRANSFER_MT_ACCOUNT_NOT_SUPPORTED
+        - TRANSFER_OUTCOME_UNKNOWN
+        - REQUEST_RATE_LIMIT
+        - SYSTEM_TEMPORARY_UNAVAILABLE
+        - SYSTEM_INTERNAL_ERROR
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TransferRequest"
+            examples:
+              own_accounts:
+                summary: Transfer between own accounts
+                value:
+                  destination_type: own_account
+                  source_account: "8066808"
+                  destination_account: "9484938209348"
+                  amount: "100.00"
+              to_another_client:
+                summary: Transfer to another client
+                value:
+                  destination_type: another_client
+                  source_account: "7055707"
+                  destination_account: "9484938201111"
+                  amount: "100.00"
+      responses:
+        "201":
+          $ref: "#/components/responses/TransferCreated"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/AuthorizationFailed"
+        "403":
+          $ref: "#/components/responses/TransferForbidden"
+        "404":
+          $ref: "#/components/responses/TransferAccountNotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "422":
+          $ref: "#/components/responses/ValidationFailed"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        "500":
+          $ref: "#/components/responses/TransferCreationInternalError"
+        "503":
+          $ref: "#/components/responses/TransferServiceUnavailable"
+
+  /v1/accounts/{account_id}/balance:
+    get:
+      tags:
+        - Accounts
+      summary: Get account balance
+      operationId: getAccountBalance
+      description: |
+        Returns the balance of one of the accounts available to your API key:
+        the amount available for transfers from this account.
+
+        The signed `EXN-IDEMPOTENCY-KEY` header is required with an empty value
+        for this GET request.
+      x-public-error-codes:
+        - REQUEST_INVALID
+        - REQUEST_INVALID_PARAMETERS
+        - AUTH_INVALID_API_KEY
+        - AUTH_INVALID_SIGNATURE
+        - AUTH_PERMISSION_DENIED
+        - ACCOUNT_NOT_FOUND
+        - REQUEST_RATE_LIMIT
+        - SYSTEM_TEMPORARY_UNAVAILABLE
+        - SYSTEM_INTERNAL_ERROR
+      parameters:
+        - $ref: "#/components/parameters/AccountIdPath"
+      responses:
+        "200":
+          description: Account balance available for transfers.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AccountBalance"
+              example:
+                account_id: "8066808"
+                balance: "1000.00"
+                currency: USD
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/AuthorizationFailed"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/AccountNotFound"
+        "422":
+          $ref: "#/components/responses/InvalidParameters"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
+
+  /v1/transfers/{transfer_id}:
+    get:
+      tags:
+        - Transfers
+      summary: Get a transfer
+      operationId: getTransfer
+      description: |
+        Returns the current status of a transfer. Use it with the `transfer_id`
+        returned in the `201` response of `POST /v1/transfers` to learn whether
+        the transfer is `done` or `rejected`.
+
+        The response contains the transfer status only. For the details of a
+        transfer that is not `done`, see Transaction History in the Payments &
+        wallet section of your Personal Area.
+
+        The signed `EXN-IDEMPOTENCY-KEY` header is required with an empty value
+        for this GET request. The transfer is readable by its sender and its
+        recipient: by any of their API keys whose scopes cover the transfer
+        type, including keys created after the transfer. A transfer that is
+        not visible to your API key is reported as `TRANSFER_NOT_FOUND`.
+      x-public-error-codes:
+        - REQUEST_INVALID
+        - REQUEST_INVALID_PARAMETERS
+        - AUTH_INVALID_API_KEY
+        - AUTH_INVALID_SIGNATURE
+        - AUTH_PERMISSION_DENIED
+        - TRANSFER_NOT_FOUND
+        - REQUEST_RATE_LIMIT
+        - SYSTEM_TEMPORARY_UNAVAILABLE
+        - SYSTEM_INTERNAL_ERROR
+      parameters:
+        - $ref: "#/components/parameters/TransferIdPath"
+      responses:
+        "200":
+          description: Current transfer status.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Transfer"
+              examples:
+                processing:
+                  summary: Transfer in progress
+                  value:
+                    transfer_id: "2000000074"
+                    status: processing
+                done:
+                  summary: Completed transfer
+                  value:
+                    transfer_id: "2000000074"
+                    status: done
+                rejected:
+                  summary: Rejected transfer
+                  value:
+                    transfer_id: "2000000074"
+                    status: rejected
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/AuthorizationFailed"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/TransferNotFound"
+        "422":
+          $ref: "#/components/responses/InvalidParameters"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
+
+components:
+  securitySchemes:
+    ExnApiKeyAuth:
+      type: apiKey
+      in: header
+      name: EXN-API-KEY
+      description: |
+        Public API key identifier used by signed requests. The value must match
+        the `api_key` field in the decoded EXN-DATA payload.
+
+    ExnTimestampAuth:
+      type: apiKey
+      in: header
+      name: EXN-TIMESTAMP
+      description: |
+        Unix timestamp in milliseconds. The value must match the `timestamp`
+        field in the decoded EXN-DATA payload.
+
+    ExnDataAuth:
+      type: apiKey
+      in: header
+      name: EXN-DATA
+      description: |
+        Base64url-encoded JSON payload without '=' padding. The decoded payload
+        must conform to `SignedRequestData` and is the payload signed by
+        EXN-SIGN.
+
+    ExnSignatureAuth:
+      type: apiKey
+      in: header
+      name: EXN-SIGN
+      description: |
+        Ed25519 signature of the decoded EXN-DATA payload bytes, encoded as
+        base64url without '=' padding. The signature is not calculated over
+        the base64url-encoded EXN-DATA string.
+
+    ExnSignVersionAuth:
+      type: apiKey
+      in: header
+      name: EXN-SIGN-VERSION
+      description: |
+        Signature protocol version. The only supported value is `1`, and it
+        must match the `sign_version` field in the decoded EXN-DATA payload.
+
+    ExnIdempotencyKeyAuth:
+      type: apiKey
+      in: header
+      name: EXN-IDEMPOTENCY-KEY
+      description: |
+        Idempotency key. For POST requests it is required
+        and must be a UUID; for signed GET requests it is required with an empty
+        value. The value must match `idempotency_key` in EXN-DATA. Keys are
+        unique per client and do not expire; see Idempotency in the API
+        description.
+
+  parameters:
+    AccountIdPath:
+      name: account_id
+      in: path
+      required: true
+      description: The account to read. Must be available to your API key.
+      schema:
+        $ref: "#/components/schemas/AccountId"
+
+    TransferIdPath:
+      name: transfer_id
+      in: path
+      required: true
+      description: Transfer identifier returned when the transfer was created.
+      schema:
+        $ref: "#/components/schemas/TransferId"
+
+  responses:
+    TransferCreated:
+      description: |
+        Transfer created. The transfer can still be `processing`; get its final
+        status (`done` or `rejected`) with `GET /v1/transfers/{transfer_id}`.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/TransferCreated"
+          example:
+            transfer_id: "2000000074"
+            source:
+              amount: "100.00"
+              currency: USD
+            destination:
+              amount: "91.80"
+              currency: EUR
+
+    BadRequest:
+      description: Request is malformed.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            code: 3000
+            error_message: REQUEST_INVALID
+            description: The request body is not valid JSON. Fix the request structure and send it again.
+
+    AuthorizationFailed:
+      description: Authentication failed.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          examples:
+            invalid_api_key:
+              value:
+                code: 1000
+                error_message: AUTH_INVALID_API_KEY
+                description: API key is invalid or inactive.
+            invalid_signature:
+              value:
+                code: 1001
+                error_message: AUTH_INVALID_SIGNATURE
+                description: Request signature verification failed.
+
+    Forbidden:
+      description: The API key is not allowed to perform this operation (scope or source IP).
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            code: 1002
+            error_message: AUTH_PERMISSION_DENIED
+            description: API key is not authorized for this operation.
+
+    TransferForbidden:
+      description: The API key is not allowed to perform this operation (scope or source IP), or the source account is not allowed.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          examples:
+            permission_denied:
+              value:
+                code: 1002
+                error_message: AUTH_PERMISSION_DENIED
+                description: API key is not authorized for this operation.
+            source_not_allowed:
+              value:
+                code: 7002
+                error_message: TRANSFER_SOURCE_NOT_ALLOWED
+                description: The source account is not a Partner Reward Wallet. Use your Partner Reward Wallet as the source account for transfers to another client.
+
+    AccountNotFound:
+      description: The account does not exist or is not available to your API key.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            code: 2000
+            error_message: ACCOUNT_NOT_FOUND
+            description: An account with the specified identifier was not found. Check the account number.
+
+    TransferAccountNotFound:
+      description: |
+        The source or destination account does not exist, is not available to
+        your API key, or does not match the declared `destination_type`.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            code: 2000
+            error_message: ACCOUNT_NOT_FOUND
+            description: An account with the specified identifier was not found. Check the account number.
+
+    TransferNotFound:
+      description: |
+        The transfer does not exist, you are neither its sender nor its
+        recipient, or its type is not covered by the scopes of your API key.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            code: 7010
+            error_message: TRANSFER_NOT_FOUND
+            description: Transfer with the specified transfer_id not found. Check the identifier.
+
+    Conflict:
+      description: The idempotency key was reused with a different request, or the source account lacks funds.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          examples:
+            idempotency_key_reused:
+              value:
+                code: 3016
+                error_message: REQUEST_IDEMPOTENCY_KEY_REUSED
+                description: The idempotency key was already used with a different request. Use a new key for a new transfer; reuse a key only to retry the exact same request.
+            insufficient_funds:
+              value:
+                code: 7004
+                error_message: TRANSFER_INSUFFICIENT_FUNDS
+                description: Insufficient funds on the source account. Check the balance, then fund the source account or reduce the amount.
+
+    ValidationFailed:
+      description: Request parameters or transfer rules validation failed.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          examples:
+            request_invalid_parameters:
+              value:
+                code: 3001
+                error_message: REQUEST_INVALID_PARAMETERS
+                description: "Some request parameters did not pass validation: a required field is missing, or a value has a wrong type or format. Fix them and send the request again."
+            not_supported:
+              value:
+                code: 7000
+                error_message: TRANSFER_NOT_SUPPORTED
+                description: Transfer is not supported between these accounts. Choose a different account combination.
+            destination_not_supported:
+              value:
+                code: 7001
+                error_message: TRANSFER_DESTINATION_NOT_SUPPORTED
+                description: Transfers to this destination account are not supported. Choose another destination account.
+            operation_not_allowed:
+              value:
+                code: 7003
+                error_message: OPERATION_NOT_ALLOWED
+                description: This operation is not allowed for your account. Check account eligibility and transfer availability, or contact support.
+            amount_too_small:
+              value:
+                code: 7005
+                error_message: TRANSFER_AMOUNT_TOO_SMALL
+                description: Amount is below the allowed minimum. Increase the amount.
+            amount_too_large:
+              value:
+                code: 7006
+                error_message: TRANSFER_AMOUNT_TOO_LARGE
+                description: Amount is above the allowed maximum. Reduce the amount.
+            limit_reached:
+              value:
+                code: 7007
+                error_message: TRANSFER_LIMIT_REACHED
+                description: Transfer limit reached. Try again later; changing the amount will not help.
+            mt_account_not_supported:
+              value:
+                code: 7009
+                error_message: TRANSFER_MT_ACCOUNT_NOT_SUPPORTED
+                description: Transfers to or from MT4/MT5 accounts are not supported. Choose a non-MT account.
+
+    InvalidParameters:
+      description: Request parameters did not pass validation.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            code: 3001
+            error_message: REQUEST_INVALID_PARAMETERS
+            description: "Some request parameters did not pass validation: a required field is missing, or a value has a wrong type or format. Fix them and send the request again."
+
+    TooManyRequests:
+      description: Public API endpoint quota exceeded.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            code: 3015
+            error_message: REQUEST_RATE_LIMIT
+            description: Request rate limit exceeded. Wait before sending another request.
+
+    ServiceUnavailable:
+      description: Service temporarily unavailable.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            code: 2
+            error_message: SYSTEM_TEMPORARY_UNAVAILABLE
+            description: Service is temporarily unavailable. Retry with exponential backoff.
+
+    TransferServiceUnavailable:
+      description: Service temporarily unavailable.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            code: 2
+            error_message: SYSTEM_TEMPORARY_UNAVAILABLE
+            description: Service is temporarily unavailable. Retry with exponential backoff. Keep the same idempotency key when retrying the same request.
+
+    InternalServerError:
+      description: Unexpected internal error.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            code: 3
+            error_message: SYSTEM_INTERNAL_ERROR
+            description: Service experienced an unexpected internal error. Retry with exponential backoff; contact support if it repeats.
+
+    TransferCreationInternalError:
+      description: Unexpected internal error, or the transfer outcome is unknown.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          examples:
+            internal_error:
+              value:
+                code: 3
+                error_message: SYSTEM_INTERNAL_ERROR
+                description: Service experienced an unexpected internal error. Retry with exponential backoff; contact support if it repeats.
+            outcome_unknown:
+              value:
+                code: 7008
+                error_message: TRANSFER_OUTCOME_UNKNOWN
+                description: "A temporary service interruption occurred - the transfer may or may not have been created. Resend the exact same request with the same idempotency key: a transfer that already exists is not executed again. A new key can send the money twice. Check the transfer in Transaction History in your Personal Area."
+
+  schemas:
+    SignedRequestData:
+      type: object
+      additionalProperties: false
+      description: |
+        Decoded EXN-DATA payload. The payload is signed by EXN-SIGN and
+        cross-checked against the EXN-* request headers.
+      required:
+        - api_key
+        - idempotency_key
+        - timestamp
+        - sign_version
+        - method
+        - path
+        - body_hash
+      properties:
+        api_key:
+          type: string
+          minLength: 1
+          description: Must equal the EXN-API-KEY header value.
+        idempotency_key:
+          type: string
+          description: Must equal EXN-IDEMPOTENCY-KEY; a UUID for POST requests, empty for signed GET requests.
+        timestamp:
+          type: integer
+          format: int64
+          description: Unix timestamp in milliseconds; must equal EXN-TIMESTAMP.
+        sign_version:
+          type: integer
+          const: 1
+          description: Must equal the EXN-SIGN-VERSION header value.
+        method:
+          type: string
+          enum:
+            - GET
+            - POST
+          description: Uppercase HTTP method.
+        path:
+          type: string
+          minLength: 1
+          description: Request path with query string exactly as transmitted.
+        body_hash:
+          type: string
+          pattern: "^[A-Za-z0-9_-]+$"
+          description: SHA-256 body hash encoded as unpadded base64url.
+      examples:
+        - api_key: your-api-key
+          idempotency_key: 0f8fad5b-d9cb-469f-a165-70867728950e
+          timestamp: 1787576070123
+          sign_version: 1
+          method: POST
+          path: /v1/transfers
+          body_hash: 1LVQQ9_kd766kYfgSbEEoHrcOkx9Kcl08gT0AYMMolg
+        - api_key: your-api-key
+          idempotency_key: ""
+          timestamp: 1787576070123
+          sign_version: 1
+          method: GET
+          path: /v1/accounts/8066808/balance
+          body_hash: 47DEQpj8HBSa-_TImW-5JCeuQeRkm5NMpJWZG3hSuFU
+
+    AccountId:
+      type: string
+      minLength: 1
+      description: Account identifier. Always send it as a string, exactly as you received it; do not convert it to a number.
+
+    TransferId:
+      type: string
+      pattern: "^[0-9]+$"
+      minLength: 1
+      description: Transfer identifier returned when a transfer is created. Always send it as a string, exactly as you received it.
+
+    Amount:
+      type: string
+      minLength: 1
+      maxLength: 29
+      pattern: '^[0-9]+(\.[0-9]+)?$'
+      description: Positive decimal amount as a string. Sending more decimal places than the currency allows is rejected — the amount is never rounded for you.
+      examples:
+        - "100.00"
+
+    TransferDestinationType:
+      type: string
+      enum:
+        - own_account
+        - another_client
+      description: |
+        Whose account the money goes to:
+        - `own_account`: another of your own accounts
+        - `another_client`: an account of another Exness client; available to
+          partners whose API key has the `Partner transfers` scope, and always
+          sent from your Partner Reward Wallet
+
+        The value must match the destination account. A mismatch is reported as
+        `ACCOUNT_NOT_FOUND`, the same as an account that does not exist.
+
+    TransferRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - destination_type
+        - source_account
+        - destination_account
+        - amount
+      properties:
+        destination_type:
+          $ref: "#/components/schemas/TransferDestinationType"
+        source_account:
+          $ref: "#/components/schemas/AccountId"
+          description: |
+            One of your own accounts to send from. For
+            `destination_type: another_client`, it must be your Partner Reward
+            Wallet.
+        destination_account:
+          $ref: "#/components/schemas/AccountId"
+          description: The account to send money to. Must match `destination_type`.
+        amount:
+          $ref: "#/components/schemas/Amount"
+          description: Amount in the currency of the source account.
+
+    Money:
+      type: object
+      additionalProperties: false
+      required:
+        - amount
+        - currency
+      properties:
+        amount:
+          type: string
+          pattern: '^[0-9]+(\.[0-9]+)?$'
+          description: Decimal amount as a string.
+        currency:
+          type: string
+          minLength: 1
+          description: Currency code.
+
+    TransferCreated:
+      type: object
+      additionalProperties: false
+      description: |
+        A created transfer. Creation does not mean that the money has been
+        transferred; see `Transfer.status`. In a response to a retry with the same
+        idempotency key, `transfer_id` is the original one, and the amounts are
+        calculated for the retry.
+      required:
+        - transfer_id
+        - source
+        - destination
+      properties:
+        transfer_id:
+          $ref: "#/components/schemas/TransferId"
+        source:
+          $ref: "#/components/schemas/Money"
+          description: Amount of this transfer in the source account currency.
+        destination:
+          $ref: "#/components/schemas/Money"
+          description: Amount of this transfer in the destination account currency.
+
+    AccountBalance:
+      type: object
+      additionalProperties: false
+      required:
+        - account_id
+        - balance
+        - currency
+      properties:
+        account_id:
+          $ref: "#/components/schemas/AccountId"
+        balance:
+          type: string
+          pattern: '^[0-9]+(\.[0-9]+)?$'
+          description: |
+            Amount available for transfers from the account, as a non-negative
+            decimal string in the account currency.
+        currency:
+          type: string
+          minLength: 1
+          description: Account currency code.
+
+    Transfer:
+      type: object
+      additionalProperties: false
+      description: A transfer and its current status.
+      required:
+        - transfer_id
+        - status
+      properties:
+        transfer_id:
+          $ref: "#/components/schemas/TransferId"
+        status:
+          type: string
+          enum:
+            - processing
+            - done
+            - rejected
+          description: |
+            Transfer state. `done` and `rejected` are final and never change
+            once reached:
+            - `processing`: the transfer is in progress; check again later.
+              Transfers usually complete within a few seconds; the processing
+              time is not guaranteed. If a transfer stays `processing` beyond
+              your own time budget, contact Customer Support with the
+              `transfer_id`
+            - `done`: the money has been transferred (final)
+            - `rejected`: the transfer was not completed (final). The funds are
+              not debited from the source account, or they are returned to it.
+              The API does not return the reason; see Transaction History in the
+              Payments & wallet section of your Personal Area
+
+    ErrorResponse:
+      type: object
+      additionalProperties: false
+      description: |
+        Public API business error response. Each error response contains
+        exactly one error.
+
+        `code` and `error_message` are the primary signals for client
+        automation. Public errors are non-retryable by default.
+
+        `description` is a short human-readable hint. Its text may change
+        without notice and must not be parsed.
+      required:
+        - code
+        - error_message
+        - description
+      properties:
+        code:
+          $ref: "#/components/schemas/PublicApiErrorCode"
+        error_message:
+          type: string
+          pattern: "^[A-Z][A-Z0-9]*(_[A-Z0-9]+)*$"
+          description: Stable public error message in `<CATEGORY>_<REASON>` format.
+        description:
+          type: string
+          minLength: 1
+          description: Human-readable hint describing the error.
+
+    PublicApiErrorCode:
+      type: integer
+      format: int32
+      description: |
+        Stable public business error code. HTTP status describes the transport/API layer;
+        this code is the primary business signal for client automation.
+
+        Public codes currently returned by this API:
+        - 2: SYSTEM_TEMPORARY_UNAVAILABLE
+        - 3: SYSTEM_INTERNAL_ERROR
+        - 1000: AUTH_INVALID_API_KEY
+        - 1001: AUTH_INVALID_SIGNATURE
+        - 1002: AUTH_PERMISSION_DENIED
+        - 2000: ACCOUNT_NOT_FOUND
+        - 3000: REQUEST_INVALID
+        - 3001: REQUEST_INVALID_PARAMETERS
+        - 3015: REQUEST_RATE_LIMIT
+        - 3016: REQUEST_IDEMPOTENCY_KEY_REUSED
+        - 7000: TRANSFER_NOT_SUPPORTED
+        - 7001: TRANSFER_DESTINATION_NOT_SUPPORTED
+        - 7002: TRANSFER_SOURCE_NOT_ALLOWED
+        - 7003: OPERATION_NOT_ALLOWED
+        - 7004: TRANSFER_INSUFFICIENT_FUNDS
+        - 7005: TRANSFER_AMOUNT_TOO_SMALL
+        - 7006: TRANSFER_AMOUNT_TOO_LARGE
+        - 7007: TRANSFER_LIMIT_REACHED
+        - 7008: TRANSFER_OUTCOME_UNKNOWN
+        - 7009: TRANSFER_MT_ACCOUNT_NOT_SUPPORTED
+        - 7010: TRANSFER_NOT_FOUND
+      enum:
+        - 2
+        - 3
+        - 1000
+        - 1001
+        - 1002
+        - 2000
+        - 3000
+        - 3001
+        - 3015
+        - 3016
+        - 7000
+        - 7001
+        - 7002
+        - 7003
+        - 7004
+        - 7005
+        - 7006
+        - 7007
+        - 7008
+        - 7009
+        - 7010

@@ -1,0 +1,3 @@
+knowledge/exness/versions/**/sources/* -text -whitespace
+knowledge/exness/versions/**/evidence/* -text
+archive/*.sanitized.json -text

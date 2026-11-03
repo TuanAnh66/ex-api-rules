@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "allowedHosts": ["www.exness-api.com", "exness-api.com", "get.exness.help"],
+  "maxSources": 80,
+  "sources": [
+    {"id":"payments-spec","url":"https://www.exness-api.com/openapi/payments.public.yaml","kind":"openapi","scope":"payments"},
+    {"id":"trading-spec","url":"https://www.exness-api.com/openapi/trading.public.yaml","kind":"openapi","scope":"trading"},
+    {"id":"auth-signing","url":"https://www.exness-api.com/authentication/request-signing","kind":"html","scope":"common"},
+    {"id":"auth-key-setup","url":"https://www.exness-api.com/authentication/api-key-and-host-setup","kind":"html","scope":"common"},
+    {"id":"payments-overview","url":"https://www.exness-api.com/payments/get-started","kind":"html","scope":"payments"},
+    {"id":"payments-guides","url":"https://www.exness-api.com/payments/guides","kind":"html","scope":"payments","discover":true},
+    {"id":"trading-guides","url":"https://www.exness-api.com/trading/guides","kind":"html","scope":"trading","discover":true},
+    {"id":"payments-concepts","url":"https://www.exness-api.com/payments/core-concepts","kind":"html","scope":"payments"},
+    {"id":"payments-transfer","url":"https://www.exness-api.com/payments/guides/transfer-own-accounts","kind":"html","scope":"payments"},
+    {"id":"payments-partner","url":"https://www.exness-api.com/payments/guides/transfer-another-client","kind":"html","scope":"payments"},
+    {"id":"payments-recovery","url":"https://www.exness-api.com/payments/guides/recovery-idempotency","kind":"html","scope":"payments"},
+    {"id":"payments-errors","url":"https://www.exness-api.com/payments/guides/troubleshooting","kind":"html","scope":"payments"},
+    {"id":"payments-limits","url":"https://www.exness-api.com/payments/guides/api-configuration-and-limits","kind":"html","scope":"payments"},
+    {"id":"trading-runtime","url":"https://www.exness-api.com/trading/guides/runtime-semantics","kind":"html","scope":"trading"},
+    {"id":"trading-limits","url":"https://www.exness-api.com/trading/guides/api-configuration-and-limits","kind":"html","scope":"trading"},
+    {"id":"trading-errors","url":"https://www.exness-api.com/trading/guides/troubleshooting","kind":"html","scope":"trading"},
+    {"id":"trading-discovery","url":"https://www.exness-api.com/trading/get-started/access-point-host-discovery","kind":"html","scope":"trading"},
+    {"id":"payments-releases","url":"https://www.exness-api.com/payments/changelog/releases","kind":"html","scope":"payments"},
+    {"id":"trading-releases","url":"https://www.exness-api.com/trading/changelog/releases","kind":"html","scope":"trading"}
+  ]
+}

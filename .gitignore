@@ -1,0 +1,8 @@
+node_modules/
+.cache/
+knowledge/exness/candidates/
+knowledge/exness/active.json.tmp
+*.lock
+*.key
+*.pem
+.env*
