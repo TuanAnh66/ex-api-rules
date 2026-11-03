@@ -1,6 +1,6 @@
 # ex-api-rules
 
-On-demand public Exness evidence collection and offline code review. Node.js 22+. Install alongside ex-api-rules-core of the same version from GitHub Release tarballs until npm publication is enabled.
+On-demand public Exness evidence collection and offline code review. Node.js 22+; review requires Git 2.36+. Install alongside ex-api-rules-core of the same version from GitHub Release tarballs until npm publication is enabled.
 
 ex-api-rules bundle import --file exness-bundle-v0.1.0.json
 ex-api-rules pin --bundle 2026-11-03T16-00-20-366Z-47729188

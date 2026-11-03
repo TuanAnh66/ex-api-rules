@@ -10,6 +10,8 @@
 
 A rule describes a requirement; a check describes one way of finding violations. catalog/checks.json maps checks to stable IDs and regression cases. No check or schema claims complete business correctness. Retired rules retain IDs; superseded rules point to a successor. Inference is excluded from conformance selection.
 
+CLI Git subprocesses use one invocation helper, require Git 2.36+, override core.fsmonitor=false, and use an isolated Git configuration environment. Repository selection always follows the resolved target project; inherited GIT_DIR, GIT_WORK_TREE, GIT_INDEX_FILE and other GIT_* values cannot redirect review. Git diff also disables external diff and text conversion. The version check runs before repository inspection commands. This reduces known execution/configuration paths without claiming a sandbox against every repository-local Git feature.
+
 ## Mutable data outside installation
 
 Default store: EX_API_RULES_DATA_DIR, otherwise Windows LOCALAPPDATA/ex-api-rules or XDG_STATE_HOME/ex-api-rules (~/.local/state/ex-api-rules on other systems). Override with --data-dir. CLI refuses a store/output inside its installation or submodule.

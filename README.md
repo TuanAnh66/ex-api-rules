@@ -6,7 +6,7 @@ Tool **0.2.0** retains the approved **v0.1.0 rule bundle unchanged** (29 rules, 
 
 ## Start from a checkout
 
-Use Node.js 22+ and pnpm 11.25.0:
+Use Node.js 22+ and pnpm 11.25.0. Review also requires Git 2.36+:
 
 ```sh
 pnpm install --frozen-lockfile --ignore-scripts

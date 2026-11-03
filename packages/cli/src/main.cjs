@@ -1,8 +1,9 @@
 'use strict';
-const fs=require('node:fs'),path=require('node:path'),{execFileSync}=require('node:child_process');
+const fs=require('node:fs'),path=require('node:path');
 const core=require('ex-api-rules-core'),legacy=require('./legacy-core.cjs'),store=require('./store.cjs');
 const {reviewFiles}=require('./review-files.cjs');
 const writes=require('./write-path.cjs');
+const {createGit}=require('./git.cjs');
 const packageRoot=path.resolve(__dirname,'..');
 function parse(args){
   const [command,...rest]=args,result={command,files:[]};
@@ -21,15 +22,15 @@ function context(options={},defaults={}){
   const dataDir=writes.assertRuntimePath(options['data-dir']||store.defaultDataDir(),{forbiddenRoots:[distributionRoot,packageRoot]});
   return {projectRoot,distributionRoot,store:store.createStore(dataDir)};
 }
-function git(root,args){return execFileSync('git',['-c','safe.directory='+root,...args],{cwd:root,encoding:'utf8',maxBuffer:8*1024*1024,stdio:['ignore','pipe','pipe']});}
 function review(root,options={},distributionRoot=packageRoot){
   const ctx=context({...options,'project-root':root},{distributionRoot}),{bundle,lock,profile}=store.selectBundle(ctx,options);
+  const git=createGit(ctx.projectRoot);
   let files=options.files||[];
   if(options.base&&files.length)throw Error('Use --base or --files, not both');
   const excluded=[];
   if(options.base){
-    if(options.base.startsWith('-'))throw Error('Invalid base ref');git(root,['rev-parse','--verify',options.base+'^{commit}']);
-    files=[...new Set([...git(root,['diff','--no-ext-diff','--name-only','-z',options.base,'--']).split('\0'),...git(root,['ls-files','--others','--exclude-standard','-z']).split('\0')])].filter(file=>{
+    if(options.base.startsWith('-'))throw Error('Invalid base ref');git(['rev-parse','--verify',options.base+'^{commit}']);
+    files=[...new Set([...git(['diff','--no-ext-diff','--no-textconv','--name-only','-z',options.base,'--']).split('\0'),...git(['ls-files','--others','--exclude-standard','-z']).split('\0')])].filter(file=>{
       if(!file||!fs.existsSync(path.join(root,file))||!fs.statSync(path.join(root,file)).isFile())return false;
       try{legacy.publicFile(root,file);return true;}catch{excluded.push({file,reason:'Excluded private/external path; not read or analyzed.'});return false;}
     });
@@ -40,7 +41,7 @@ function review(root,options={},distributionRoot=packageRoot){
   const spec=bundle.manifest.sources.find(s=>s.id==='payments-spec');
   const validate=spec?legacy.validator(core.decodeBlob(bundle.portable.blobs[spec.sha256]),'TransferRequest'):()=>true;
   const results=reviewFiles(ctx.projectRoot,files,{rules},validate);
-  let head='unavailable';try{head=git(ctx.projectRoot,['rev-parse','HEAD']).trim();}catch{}
+  let head='unavailable';try{head=git(['rev-parse','HEAD']).trim();}catch{}
   let latestCheck=null;try{const check=legacy.readJSON(path.join(ctx.store.root,'cache','latest-'+bundle.artifactSha256+'.json'));latestCheck={checkedAt:check.checkedAt,status:check.status,summary:check.summary};}catch(e){if(e.code!=='ENOENT')throw e;}
   const registry=legacy.readJSON(path.join(store.resources(distributionRoot).catalog,'checks.json'));
   const ruleVersion=bundle.manifest.bundleHash===store.LEGACY_HASH?'v-'+bundle.manifest.id+'-'+bundle.manifest.bundleHash.slice(0,12):bundle.manifest.id;
