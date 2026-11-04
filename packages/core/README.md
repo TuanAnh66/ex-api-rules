@@ -1,6 +1,6 @@
 # ex-api-rules-core
 
-Pure data protocol for ex-api-rules: JSON Schema 2020-12 validation, portable bundle integrity, canonical JSON/hashes, profile selection and SARIF. No filesystem, HTTP, YAML or language parsers. Exports CommonJS plus TypeScript declarations and schemas/*.schema.json. See the repository's docs/protocol.md and NOTICE. Version 0.2.1 is being prepared as a draft release; npm publication pending.
+Pure data protocol for ex-api-rules: JSON Schema 2020-12 validation, portable bundle integrity, canonical JSON/hashes, profile selection and SARIF. No filesystem, HTTP, YAML or language parsers. Exports CommonJS plus TypeScript declarations and schemas/*.schema.json. See the repository's docs/protocol.md and NOTICE. Version 0.2.1 was released on 2026-11-04 in the [v0.2.1 GitHub Release](https://github.com/TuanAnh66/ex-api-rules/releases/tag/v0.2.1); npm publication pending.
 
 const core = require('ex-api-rules-core');
 const verified = core.verifyPortable(portableBundle);

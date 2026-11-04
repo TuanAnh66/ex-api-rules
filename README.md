@@ -2,7 +2,7 @@
 
 Versioned Exness Payments/Trading evidence and offline code review. One repository maintains language-neutral knowledge, a pure core, a Node.js CLI and an on-demand agent workflow.
 
-Tool **0.2.1** is being prepared as a draft release and retains the approved **v0.1.0 rule bundle unchanged** (29 rules, 27 sources). The tool changes distribution and reproducibility, not Exness requirements. npm publication is deferred; install reviewed release tarballs or use the pinned submodule.
+Tool **0.2.1** is available in the [v0.2.1 GitHub Release](https://github.com/TuanAnh66/ex-api-rules/releases/tag/v0.2.1), published on **2026-11-04**, and retains the approved **v0.1.0 rule bundle unchanged** (29 rules, 27 sources). The tool changes distribution and reproducibility, not Exness requirements. npm publication is deferred; install reviewed release tarballs or use the pinned submodule.
 
 ## Start from a checkout
 
