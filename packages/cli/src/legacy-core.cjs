@@ -41,7 +41,46 @@ function withoutExamples(value,context='openapi'){
   const edges=children[context]||{};
   return Object.fromEntries(Object.entries(value).filter(([k])=>!annotations[context]?.includes(k)).map(([k,v])=>[k,Object.hasOwn(edges,k)?withoutExamples(v,edges[k]):v]));
 }
-function normalize(raw,kind){
+const cleanText=value=>value.replace(/\s+/g,' ').trim();
+const exampleSelector='[data-rule-example],.example';
+const blockSelector='p,li,td,th,blockquote,figure,dd,dt,h1,h2,h3,h4,h5,h6';
+function proseText(element){
+  const clone=element.clone();clone.find('pre,code').replaceWith(' ');
+  clone.find('br').replaceWith(' ');
+  clone.find('p,div,section,li,td,th,tr,blockquote,figure,dd,dt,h1,h2,h3,h4,h5,h6').prepend(' ').append(' ');
+  return cleanText(clone.text());
+}
+function exampleHints(element){
+  const hint=element.closest(exampleSelector),hints=[];
+  if(hint.length){
+    if(hint.hasClass('example'))hints.push('class:example');
+    if(hint.attr('data-rule-example')!==undefined)hints.push('data-rule-example:'+hint.attr('data-rule-example'));
+  }
+  return hints;
+}
+function htmlEvidence($,article,sourceUrl){
+  const rawBaseHref=$('base[href]').first().attr('href')??null;
+  let baseUrl=sourceUrl||null;
+  if(rawBaseHref!==null)try{baseUrl=new URL(rawBaseHref,sourceUrl||undefined).href;}catch{}
+  const context=element=>{const block=element.closest(blockSelector);return block.length?proseText(block):'';};
+  const linkEvidence=article.find('a[href]').map((index,element)=>{
+    const link=$(element),href=link.attr('href');let resolvedHref=null;
+    try{resolvedHref=new URL(href,baseUrl||undefined).href;}catch{}
+    return {index,href,resolvedHref,text:cleanText(link.text()),context:context(link)};
+  }).get();
+  const codeEvidence=article.find('pre,code').filter((index,element)=>!$(element).parents('pre,code').length).map((index,element)=>{
+    const code=$(element),classes=[code.attr('class')||'',code.find('code').first().attr('class')||''].join(' ');
+    const language=code.attr('data-language')||classes.match(/(?:^|\s)(?:language|lang)-([^\s]+)/)?.[1]||null;
+    // Preserve parsed text exactly: indentation, tabs and repeated spaces can
+    // change YAML/Python or inline-code meaning. Never execute this evidence.
+    return {index,kind:element.tagName,language,text:code.text(),context:context(code),exampleHints:exampleHints(code)};
+  }).get();
+  const exampleEvidence=article.find(exampleSelector).filter((index,element)=>!$(element).parents(exampleSelector).length).map((index,element)=>({index,text:proseText($(element)),exampleHints:exampleHints($(element))})).get();
+  const normative=article.clone();normative.find(exampleSelector).remove();
+  return {semantic:proseText(normative),linkEvidence,codeEvidence,exampleEvidence,rawBaseHref,baseUrl,
+    links:linkEvidence.map(link=>link.resolvedHref||link.href)};
+}
+function normalize(raw,kind,{url}={}){
   const text=Buffer.isBuffer(raw)?raw.toString('utf8'):raw;
   if(kind==='openapi'){
     const document=YAML.parse(text,{uniqueKeys:true,maxAliasCount:50});
@@ -51,12 +90,9 @@ function normalize(raw,kind){
   const $=cheerio.load(text);let article=$('article').first();if(!article.length)article=$('.article-body').first();
   if(!article.length)throw Error('No documentation article; possible challenge or changed layout');
   article.find('script,style,nav,aside,button,.theme-doc-toc-mobile,.hash-link').remove();
-  const clean=s=>s.replace(/\s+/g,' ').trim();
-  const full=clean(article.text());
+  const full=cleanText(article.text());
   if(full.length<40)throw Error('Documentation article is empty');
-  const normative=article.clone();normative.find('pre,[data-rule-example],.example').remove();
-  const links=article.find('a[href]').map((i,e)=>$(e).attr('href')).get();
-  return {full,semantic:clean(normative.text()),links};
+  return {full,...htmlEvidence($,article,url)};
 }
 function differences(a,b,prefix='',out=[]){
   if(stringify(a)===stringify(b))return out;
@@ -65,8 +101,33 @@ function differences(a,b,prefix='',out=[]){
   }else if(out.length<100)out.push(prefix||'/');
   return out;
 }
-function classify(oldRaw,newRaw,kind){
-  const before=normalize(oldRaw,kind),after=normalize(newRaw,kind);
+function evidenceDelta(before,after,identity){
+  const available=new Map(),used=new Set(),changes=[];
+  after.forEach((entry,index)=>{const key=identity(entry);if(!available.has(key))available.set(key,[]);available.get(key).push(index);});
+  const content=entry=>{const {index,...value}=entry;return stringify(value);};
+  for(const entry of before){
+    const nextIndex=available.get(identity(entry))?.shift();
+    if(nextIndex===undefined)changes.push({classification:'removed',before:entry,after:null});
+    else{used.add(nextIndex);if(content(entry)!==content(after[nextIndex]))changes.push({classification:'changed',before:entry,after:after[nextIndex]});}
+  }
+  after.forEach((entry,index)=>{if(!used.has(index))changes.push({classification:'added',before:null,after:entry});});
+  return changes;
+}
+function classify(oldRaw,newRaw,kind,{beforeUrl,afterUrl}={}){
+  const before=normalize(oldRaw,kind,{url:beforeUrl}),after=normalize(newRaw,kind,{url:afterUrl});
+  if(kind!=='openapi'){
+    const linkChanges=evidenceDelta(before.linkEvidence,after.linkEvidence,link=>stringify([link.text,link.context]));
+    const codeChanges=evidenceDelta(before.codeEvidence,after.codeEvidence,code=>stringify([code.kind,code.context]));
+    const exampleChanges=evidenceDelta(before.exampleEvidence,after.exampleEvidence,example=>String(example.index));
+    const paths=[];
+    if(before.semantic!==after.semantic)paths.push('article-text');
+    if(linkChanges.length)paths.push('article-links');
+    if(codeChanges.length)paths.push('article-code');
+    if(exampleChanges.length)paths.push('article-examples');
+    const classification=before.semantic!==after.semantic?'technical':paths.length?'requires-review':hash(oldRaw)===hash(newRaw)?'unchanged':'presentation';
+    return {classification,paths,reviewRequired:paths.length>0,linkChanges,codeChanges,exampleChanges,
+      documentContext:{before:{url:beforeUrl||null,rawBaseHref:before.rawBaseHref,baseUrl:before.baseUrl},after:{url:afterUrl||null,rawBaseHref:after.rawBaseHref,baseUrl:after.baseUrl}}};
+  }
   if(hash(oldRaw)===hash(newRaw))return {classification:'unchanged',paths:[]};
   if(before.full===after.full)return {classification:'presentation',paths:[]};
   if(before.semantic===after.semantic)return {classification:'examples',paths:[]};

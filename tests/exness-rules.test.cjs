@@ -30,7 +30,8 @@ test('fetch retries transport errors; HTTP errors and challenge documents are no
 test('HTML presentation and example-only edits are separated from normative edits',()=>{
   const old='<article><h1>Rules</h1><p>Use the same key for retries and record every attempt.</p><pre>amount=100</pre></article>';
   assert.equal(core.classify(old,'<nav>new menu</nav>'+old,'html').classification,'presentation');
-  assert.equal(core.classify(old,old.replace('amount=100','amount=200'),'html').classification,'examples');
+  const codeChange=core.classify(old,old.replace('amount=100','amount=200'),'html');
+  assert.equal(codeChange.classification,'requires-review');assert.equal(codeChange.reviewRequired,true);assert.equal(codeChange.codeChanges[0].before.text,'amount=100');assert.equal(codeChange.codeChanges[0].after.text,'amount=200');
   assert.equal(core.classify(old,old.replace('same key','new key'),'html').classification,'technical');
 });
 test('OpenAPI changes distinguish examples, formatting, schemas, scopes, errors, rate and retry',()=>{
@@ -137,18 +138,20 @@ test('unparseable changed source and moved source are explicitly reported',async
 
 const seeds=core.readJSON(path.join(root,'catalog/rules.json')).map(r=>({...r,evidence:r.evidence||[{originalPath:r.localEvidence}]}));
 const validate=core.validator(JSON.stringify(schema),'TransferRequest');
+const confidenceFixtures=require('./fixtures/adapter-confidence.cjs');
 test('review detects wrong signed body/path, wrong host, retry UUID, ACK finality and precision',()=>{
   const cases=[
-    ["function sign(body,requestPath){return {body_hash:crypto.createHash('sha256').update('wrong').digest('base64url'),path:'/wrong'};}",'COMMON-SIGN-001'],
+    [confidenceFixtures.signing(`{body_hash:${confidenceFixtures.hash('wrong')},path:'/wrong'}`),'COMMON-SIGN-001'],
     ["fetch('https://api.exness.com/v1/trading/accounts/90000000001/orders');",'TRADE-HOST-001'],
-    ["function retry(){return crypto.randomUUID();}",'PAY-UUID-003'],
-    ["if(ack.operation_id){record.state='done';}",'TRADE-ACK-002'],
     ["const price = parseFloat(input.price);",'TRADE-PRECISION-005'],
     ["const amount = Number(input.amount);",'PAY-AMOUNT-002'],
     ["if(r.json.transfer_id !== record.transferId){throw Error('bad');}",'OBS-TRANSFER-ID-002'],
-    ["const body={destination_type:'own_account',source_account:123,destination_account:'456',amount:600};",'PAY-REQUEST-001']
+    [confidenceFixtures.transfer("{destination_type:'own_account',source_account:123,destination_account:'456',amount:600}"),'PAY-REQUEST-001']
   ];
   for(const [code,id]of cases){const report=analyze(code,'fixture.cjs',seeds,validate);assert(report.findings.some(f=>f.ruleId===id),id);assert(report.findings.every(f=>f.line>0&&f.evidence.length&&f.recommendation));}
+  for(const [code,id]of [["function retry(){return crypto.randomUUID();}",'PAY-UUID-003'],["if(ack.operation_id){record.state='done';}",'TRADE-ACK-002']]){
+    const report=analyze(code,'fixture.cjs',seeds,validate);assert(!report.findings.some(f=>f.ruleId===id));assert(report.manual.some(m=>m.ruleId===id&&/unresolved/.test(m.reason)));
+  }
 });
 
 test('signing local constants and unresolved data flow do not create false blocking findings',()=>{
@@ -172,7 +175,9 @@ test('signing local constants and unresolved data flow do not create false block
     assert(report.manual.some(m=>m.ruleId==='COMMON-SIGN-001'&&/unresolved/.test(m.reason)),code);
   }
   const wrong="function sign(body){const bodyHash=crypto.createHash('sha256').update('wrong').digest('base64url');return {body_hash:bodyHash};}";
-  assert(analyze(wrong,'fixture.cjs',seeds,validate).findings.some(f=>f.ruleId==='COMMON-SIGN-001'&&f.severity==='P1'));
+  const unresolved=analyze(wrong,'fixture.cjs',seeds,validate);
+  assert(!unresolved.findings.some(f=>f.ruleId==='COMMON-SIGN-001'));
+  assert(unresolved.manual.some(m=>m.ruleId==='COMMON-SIGN-001'&&/unresolved/.test(m.reason)));
 });
 test('valid-looking code is not declared fully compliant; comments do not produce findings',()=>{
   const report=analyze("// function retry(){return crypto.randomUUID();}\nconst body={destination_type:'own_account',source_account:'123',destination_account:'456',amount:'600'};",'fixture.cjs',seeds,validate);

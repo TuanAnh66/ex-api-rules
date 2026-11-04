@@ -1,0 +1,266 @@
+{
+  "description": "Sanitized language-neutral contract examples only; no live API or real account evidence.",
+  "schemaUrns": {
+    "v1": "urn:ex-api-rules:report:1",
+    "v2": "urn:ex-api-rules:report:2"
+  },
+  "file": {
+    "file": "client.py",
+    "content": "raise RuntimeError('must never execute')\n"
+  },
+  "reports": {
+    "v1": {
+      "schemaVersion": 1,
+      "toolVersion": "0.2.1",
+      "ruleVersion": "legacy-fixture",
+      "bundleHash": "516e205491fc174dafe5867a9f3bec79709de6a58af97d202699195fe514dc06",
+      "codeVersion": {
+        "head": "unavailable",
+        "files": [
+          {
+            "file": "legacy.cjs",
+            "sha256": "c5cf908b7b5a3b8d1245e0d8ecf74d08954d3fc5211c30c7baeba40cb2adc580",
+            "adapter": "javascript"
+          }
+        ]
+      },
+      "findings": [
+        {
+          "file": "legacy.cjs",
+          "line": 1,
+          "ruleId": "PAY-AMOUNT-002",
+          "severity": "P2",
+          "kind": "documented",
+          "title": "Legacy fixture finding",
+          "recommendation": "Review decimal handling.",
+          "evidence": [
+            {
+              "sourceId": "fixture",
+              "terms": [
+                "string"
+              ]
+            }
+          ]
+        }
+      ],
+      "manualChecks": [
+        {
+          "file": "legacy.cjs",
+          "reason": "Historical v1 manual shape remains readable."
+        }
+      ],
+      "coverage": {
+        "unprovenComplianceIsNotPass": true
+      },
+      "resultFingerprint": "9158b7074652e7d58cd21b4e2a7436e309c7793cf53c094bc63d5b879153bc43"
+    },
+    "v2": {
+      "schemaVersion": 2,
+      "createdAt": "2026-11-04T00:00:00.000Z",
+      "toolVersion": "0.2.1",
+      "ruleVersion": "protocol-fixture",
+      "bundleId": "protocol-fixture",
+      "bundleHash": "516e205491fc174dafe5867a9f3bec79709de6a58af97d202699195fe514dc06",
+      "artifactSha256": "dcd22167f3ab965bf7a07fd2dd6a6dda553357bc1810049d35cd223026cb20a5",
+      "bundleCanonicalization": "ecmascript-v0",
+      "fingerprintCanonicalization": "utf16-v1",
+      "profile": "default",
+      "projectLock": "pinned",
+      "codeVersion": {
+        "head": "unavailable",
+        "headStatus": "unavailable",
+        "files": [
+          {
+            "file": "client.py",
+            "sha256": "d3ac7dddcca954a5273b1972a1ff233c5a1a9547d11a09ce4cd3d4e90d37fffa",
+            "hashStatus": "complete",
+            "adapter": "unsupported",
+            "analysisStatus": "unsupported",
+            "adapterStatus": "not-run",
+            "reason": "No language adapter; this file has not been analyzed.",
+            "sizeBytes": 41,
+            "bytesRead": 41,
+            "budgetBytesCharged": 41
+          },
+          {
+            "file": "skipped.cjs",
+            "sha256": null,
+            "hashStatus": "not-computed",
+            "adapter": "javascript",
+            "analysisStatus": "budget-exceeded",
+            "adapterStatus": "not-run",
+            "reason": "File exceeds the per-file byte limit; no content read or hash computed.",
+            "sizeBytes": 1048577,
+            "bytesRead": 0,
+            "budgetBytesCharged": 0
+          }
+        ]
+      },
+      "sourceFreshness": {
+        "mode": "offline-pinned-snapshot",
+        "collectedAt": null,
+        "latestCheck": null,
+        "latestClaim": false
+      },
+      "inputPolicy": {
+        "maxFileBytes": 1048576,
+        "maxTotalBytes": 16777216,
+        "chunkBytes": 65536,
+        "fileOrder": "utf16-path-order",
+        "selection": "explicit",
+        "baseRef": null,
+        "privatePaths": "reject-explicit-report-base",
+        "untrackedIgnored": "exclude-in-base-only"
+      },
+      "outcome": "PARTIAL_REVIEW_REQUIRES_HUMAN",
+      "findings": [],
+      "manualChecks": [
+        {
+          "file": "client.py",
+          "line": null,
+          "ruleId": null,
+          "reason": "No language adapter; this file has not been analyzed.",
+          "category": "unanalyzed"
+        },
+        {
+          "file": "skipped.cjs",
+          "line": null,
+          "ruleId": null,
+          "reason": "File exceeds the per-file byte limit; no content read or hash computed.",
+          "category": "unanalyzed"
+        }
+      ],
+      "coverage": {
+        "measurement": "selected-rule-inventory-only",
+        "automatedFindingsOnly": true,
+        "unprovenComplianceIsNotPass": true,
+        "ruleCount": 1,
+        "selectedRules": [
+          {
+            "id": "PAY-AMOUNT-002",
+            "kind": "documented",
+            "scope": "payments",
+            "status": "approved"
+          }
+        ],
+        "excludedRules": [],
+        "checks": [
+          {
+            "id": "JS-TRANSFER-BODY",
+            "ruleIds": [
+              "PAY-AMOUNT-002"
+            ],
+            "adapter": "javascript",
+            "tests": [
+              "fixture#manual-review"
+            ]
+          }
+        ],
+        "checkApplicability": [
+          {
+            "file": "client.py",
+            "checkId": "JS-TRANSFER-BODY",
+            "ruleIds": [
+              "PAY-AMOUNT-002"
+            ],
+            "status": "not-run",
+            "reason": "File is unsupported; no adapter/check analysis completed."
+          },
+          {
+            "file": "skipped.cjs",
+            "checkId": "JS-TRANSFER-BODY",
+            "ruleIds": [
+              "PAY-AMOUNT-002"
+            ],
+            "status": "not-run",
+            "reason": "File is budget-exceeded; no adapter/check analysis completed."
+          }
+        ],
+        "unsupportedFiles": [
+          "client.py"
+        ],
+        "parseFailedFiles": [],
+        "unanalyzedFiles": [
+          "client.py",
+          "skipped.cjs"
+        ]
+      },
+      "conflicts": [],
+      "limitations": [
+        "No findings does not prove compliance."
+      ],
+      "resultFingerprint": "cf36bd63498835d0a8696f025e71f521f7ddce001bf2ebbd785f957a10d277de"
+    }
+  },
+  "invalidV2": [
+    {
+      "name": "missing file status",
+      "remove": [
+        "codeVersion",
+        "files",
+        0,
+        "analysisStatus"
+      ]
+    },
+    {
+      "name": "partial hash presented as complete",
+      "set": [
+        "codeVersion",
+        "files",
+        0,
+        "bytesRead"
+      ],
+      "value": 1
+    },
+    {
+      "name": "fake digest",
+      "set": [
+        "codeVersion",
+        "files",
+        0,
+        "sha256"
+      ],
+      "value": "partial"
+    },
+    {
+      "name": "unanalysed input marked as executed check",
+      "set": [
+        "coverage",
+        "checkApplicability",
+        0,
+        "status"
+      ],
+      "value": "ran"
+    },
+    {
+      "name": "missing manual reason",
+      "set": [
+        "manualChecks"
+      ],
+      "value": []
+    },
+    {
+      "name": "invalid location",
+      "set": [
+        "manualChecks",
+        0,
+        "line"
+      ],
+      "value": 0
+    },
+    {
+      "name": "missing selected inventory",
+      "remove": [
+        "coverage",
+        "selectedRules"
+      ]
+    },
+    {
+      "name": "unsupported schema",
+      "set": [
+        "schemaVersion"
+      ],
+      "value": 3
+    }
+  ]
+}

@@ -1,5 +1,6 @@
 """Reference consumer: no Exness connection or Python dependency required."""
 import json
+import hashlib
 from pathlib import Path
 
 
@@ -26,3 +27,21 @@ for case in fixture['canonicalCases']:
     assert json.dumps(canonical(case['input'], legacy=True), ensure_ascii=False, separators=(',', ':')) == case['legacyCanonical'], case['name']
 assert fixture['unsupported']['adapter'] == 'unsupported'
 print('Python reference consumer agrees with the language-neutral canonicalization fixture.')
+
+reports = json.loads(Path(__file__).with_name('report-protocol-v2.json').read_text(encoding='utf-8'))
+report = reports['reports']['v2']
+keys = ['schemaVersion', 'toolVersion', 'ruleVersion', 'bundleHash', 'artifactSha256',
+        'profile', 'codeVersion', 'inputPolicy', 'findings', 'manualChecks',
+        'coverage', 'conflicts', 'limitations']
+payload = {key: report[key] for key in keys}
+encoded = json.dumps(canonical(payload), ensure_ascii=False, separators=(',', ':')).encode('utf-8')
+assert hashlib.sha256(encoded).hexdigest() == report['resultFingerprint']
+file = report['codeVersion']['files'][0]
+assert hashlib.sha256(reports['file']['content'].encode('utf-8')).hexdigest() == file['sha256']
+assert file['analysisStatus'] == 'unsupported' and file['adapterStatus'] == 'not-run'
+assert report['coverage']['unanalyzedFiles'] == [item['file'] for item in report['codeVersion']['files']]
+assert report['coverage']['checkApplicability'][0]['status'] == 'not-run'
+assert report['codeVersion']['files'][1]['sha256'] is None
+assert report['codeVersion']['files'][1]['analysisStatus'] == 'budget-exceeded'
+assert reports['reports']['v1']['schemaVersion'] == 1
+print('Python reference consumer agrees with report v2 identity, null/status policy and fingerprint.')

@@ -69,7 +69,7 @@ async function checkUpdates(root,{fetcher=fetch}={}){
   const changes=compareSources(baseline.manifest.sources,baseline.dir,current,dir,baseline.rules);
   const failed=changes.filter(c=>c.classification==='unavailable-or-unparseable').length;
   const report={id,baseline:baseline.active.version,checkedAt:new Date().toISOString(),status:failed?'incomplete':'complete',sources:current,changes,
-    summary:{failed,technical:changes.filter(c=>['technical','new-source','removed-from-catalog'].includes(c.classification)).length,nonTechnical:changes.filter(c=>['presentation','examples','source-moved'].includes(c.classification)).length},activeChanged:false};
+    summary:{failed,technical:changes.filter(c=>['technical','new-source','removed-from-catalog'].includes(c.classification)).length,reviewRequired:changes.filter(c=>c.reviewRequired).length,nonTechnical:changes.filter(c=>!c.reviewRequired&&['presentation','examples','source-moved'].includes(c.classification)).length},activeChanged:false};
   writeJSON(path.join(dir,'report.json'),report);writeJSON(path.join(l.cache,'latest-check.json'),report);
   return report;
 }

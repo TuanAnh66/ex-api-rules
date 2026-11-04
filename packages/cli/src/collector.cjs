@@ -33,7 +33,7 @@ async function fetchSources(catalog,directory,fetcher=fetch){
       let downloaded=false;
       try{
         const {raw,...meta}=await download(source.url,catalog,fetcher);downloaded=true;
-        const parsed=normalize(raw,source.kind),sha256=hash(raw);
+        const parsed=normalize(raw,source.kind,{url:meta.finalUrl||source.url}),sha256=hash(raw);
         const snapshot='sources/'+sha256+(source.kind==='openapi'?'.yaml':'.html');
         writes.mkdir(path.join(directory,'sources'));writes.writeFile(safePath(directory,snapshot),raw);
         return {record:{...source,...meta,fetchedAt:new Date().toISOString(),sha256,snapshot},links:source.discover?parsed.links||[]:[]};
@@ -59,10 +59,12 @@ function compareSources(previous,oldDir,current,newDir,rules){
     if(!after)change={classification:'removed-from-catalog',paths:[]};
     else if(after.error)change={classification:'unavailable-or-unparseable',failureType:after.failureType,error:after.error,paths:[]};
     else if(!before)change={classification:'new-source',paths:[]};
-    else{change=classify(fs.readFileSync(safePath(oldDir,before.snapshot)),fs.readFileSync(safePath(newDir,after.snapshot)),after.kind);}
+    else{change=classify(fs.readFileSync(safePath(oldDir,before.snapshot)),fs.readFileSync(safePath(newDir,after.snapshot)),after.kind,{beforeUrl:before.finalUrl||before.url,afterUrl:after.finalUrl||after.url});}
     const direct=rules.filter(r=>r.evidence.some(e=>e.sourceId===id));
     const affected=direct.length?direct:rules.filter(r=>r.scope===(after||before).scope||r.scope==='common');
-    if(after?.redirected&&change.classification==='unchanged')change.classification='source-moved';
+    const moved=before&&after&&((before.finalUrl||before.url)!==(after.finalUrl||after.url)||before.url!==after.url||!!before.redirected!==!!after.redirected);
+    if(moved&&change.classification==='unchanged')change.classification='source-moved';
+    change.reviewRequired=change.reviewRequired||!['unchanged','presentation'].includes(change.classification)||!!moved;
     return {id,url:after?.url||before.url,...change,redirected:after?.redirected||false,finalUrl:after?.finalUrl,
       affectedRules:affected.map(r=>r.id),scopes:[...new Set(affected.map(r=>r.scope))],
       endpoints:affected.flatMap(r=>r.endpoints||[]),reviewTargets:affected.flatMap(r=>r.reviewTargets||[]),tests:affected.flatMap(r=>r.tests||[])};
