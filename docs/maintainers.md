@@ -4,9 +4,24 @@ Collect -> candidate/diff -> PR -> maintainer review -> offline tests -> release
 
 Review every changed rule against the public original and retained snapshot, including scope, date, precision, permission, error and retry implications. Record the candidate ID, bundle hash, reviewer and decision in release metadata/PR. Term matches only show an anchor still exists. Keep documented, observed and inference separate, including contradictory evidence.
 
-approve --candidate ID --reviewed-by NAME is an explicit maintainer decision. Do not impersonate another reviewer. It writes external approvals and maintainer-active only. pin is a separate consumer decision. Approval interruption leaves a lock rather than silently retrying an unknown partial operation; inspect store artifacts/approvals before clearing a stale write.lock.
+approve --candidate ID --reviewed-by NAME is an explicit maintainer decision. Do not impersonate another reviewer. It installs immutable external artifacts, records the decision and publishes maintainer-active; pin is a separate consumer decision. No consuming project lock changes. Collection reports structural added/removed/changed/unchanged over both rule lists, including before/after and history issues. Always review the actual sources even when structure is unchanged.
+
+Approved IDs remain in later bundles: retire with deprecated or superseded rather than deletion. A stable ID keeps scope, kind and introducedIn; changed rule content or lifecycle requires an increased revision. Superseded successors must exist and must not form self-references/cycles. The exact legacy snapshots stay untouched when lifecycle metadata is introduced into a new bundle. A new evidence kind/scope needs a new ID rather than rebinding an existing one.
+
+Approval holds bundles/write.lock from candidate verification through artifact/index writes, immutable approval creation, active replacement and readback. The record ID is a- plus SHA-256 of the UTF-8 candidate ID, so a candidate cannot be reapproved with different bytes or reviewer. Its envelope contains schemaVersion:1, approval and sha256; sha256 covers core.stringify(approval), independently of the portable bundle's digest algorithm. A schemaVersion:1 active pointer carries id, artifactSha256, approvalId and approvalSha256. Records retain the prior pointer and exact baseline; readers verify the chain. Hashes establish integrity, not proof of an author's identity against an attacker who can rewrite the whole store.
+
+Recovery is explicit:
+
+- Before active replacement, artifacts/index entries or an unreferenced approval can remain. These are prepared/orphan data, not activation. After a caught error with no stale lock, the same requested candidate/reviewer may be retried; existing artifacts/records are verified and reused, not overwritten. An orphan whose baseline changed is rejected and needs a newly reviewed candidate.
+- After active replacement, the pointer and its history determine commit. Retrying a committed candidate returns already-committed without a new timestamp, record, or activation. A -> B -> retry A keeps B active. Import cannot bypass approval using activate:true.
+- The library distinguishes APPROVAL_NOT_COMMITTED, APPROVAL_COMMITTED and APPROVAL_STATE_UNKNOWN after pointer publication is attempted. CLI messages state the distinction and operational failures exit 2. A committed error means finalization failed after commit; an unknown state requires inspection before retry. Neither means an automatic rollback occurred.
+- Process termination, lock-release failure, or interrupted cleanup may leave bundles/write.lock or temporary files. Inspect the pointer, referenced record/checksum, artifact/index and history before explicitly clearing a stale lock. No age timeout, automatic lock removal, orphan activation, repair of corrupted data or implicit approval is provided. Legacy maintainer pointers without approval references fail closed and require an explicitly authorized migration; imported portable bundles and consuming project locks remain usable.
+
+Files are fsynced before rename; POSIX directory entries are synced. Windows directory fsync is unavailable through this implementation's Node filesystem API. Tests inject synchronous filesystem faults, not physical power loss. Treat filesystem/platform durability limits and a state-unknown error as operator recovery cases.
 
 ## Releases
+
+The report v2/input-budget work is not a new release. Tool metadata remains at the current development snapshot by request; before any separately authorized publication, assign/review the appropriate next version and release artifacts. Never overwrite or reissue the already published 0.2.1 assets. Both report schemas and the language-neutral report vectors are included by build/contract packaging; executing release/package smoke remains a separate explicitly requested step.
 
 pnpm build && pnpm validate && pnpm test
 pnpm release

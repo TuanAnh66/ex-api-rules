@@ -1,0 +1,1050 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:ex-api-rules:report:2",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "createdAt",
+    "toolVersion",
+    "ruleVersion",
+    "bundleId",
+    "bundleHash",
+    "artifactSha256",
+    "bundleCanonicalization",
+    "fingerprintCanonicalization",
+    "profile",
+    "projectLock",
+    "codeVersion",
+    "sourceFreshness",
+    "inputPolicy",
+    "outcome",
+    "findings",
+    "manualChecks",
+    "coverage",
+    "conflicts",
+    "limitations",
+    "resultFingerprint"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": 2
+    },
+    "createdAt": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(?:\\.[0-9]+)?Z$"
+    },
+    "toolVersion": {
+      "type": "string",
+      "minLength": 1
+    },
+    "ruleVersion": {
+      "type": "string",
+      "minLength": 1
+    },
+    "bundleId": {
+      "type": "string",
+      "minLength": 1
+    },
+    "bundleHash": {
+      "$ref": "#/$defs/digest"
+    },
+    "artifactSha256": {
+      "$ref": "#/$defs/digest"
+    },
+    "bundleCanonicalization": {
+      "enum": [
+        "ecmascript-v0",
+        "utf16-v1"
+      ]
+    },
+    "fingerprintCanonicalization": {
+      "const": "utf16-v1"
+    },
+    "profile": {
+      "enum": [
+        "default",
+        "payments",
+        "trading"
+      ]
+    },
+    "projectLock": {
+      "enum": [
+        "pinned",
+        "legacy-compatibility-unlocked"
+      ]
+    },
+    "codeVersion": {
+      "$ref": "#/$defs/codeVersion"
+    },
+    "sourceFreshness": {
+      "$ref": "#/$defs/sourceFreshness"
+    },
+    "inputPolicy": {
+      "$ref": "#/$defs/policy"
+    },
+    "outcome": {
+      "const": "PARTIAL_REVIEW_REQUIRES_HUMAN"
+    },
+    "findings": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/finding"
+      }
+    },
+    "manualChecks": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/manual"
+      }
+    },
+    "coverage": {
+      "$ref": "#/$defs/coverage"
+    },
+    "conflicts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "ruleId",
+          "conflictsWith",
+          "evidence"
+        ],
+        "properties": {
+          "ruleId": {
+            "$ref": "#/$defs/ruleId"
+          },
+          "conflictsWith": {
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/ruleId"
+            },
+            "minItems": 1,
+            "uniqueItems": true
+          },
+          "evidence": {
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/evidence"
+            },
+            "minItems": 1
+          }
+        }
+      }
+    },
+    "limitations": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "minItems": 1
+    },
+    "resultFingerprint": {
+      "$ref": "#/$defs/digest"
+    }
+  },
+  "$defs": {
+    "path": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^(?!/|[A-Za-z]:)(?!.*(?:^|/)\\.\\.(?:/|$))[^\\x00\\\\]+$"
+    },
+    "digest": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "ruleId": {
+      "type": "string",
+      "pattern": "^[A-Z][A-Z0-9-]+$"
+    },
+    "file": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "file",
+        "sha256",
+        "hashStatus",
+        "adapter",
+        "analysisStatus",
+        "adapterStatus",
+        "reason",
+        "sizeBytes",
+        "bytesRead",
+        "budgetBytesCharged"
+      ],
+      "properties": {
+        "file": {
+          "$ref": "#/$defs/path"
+        },
+        "sha256": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/digest"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "hashStatus": {
+          "enum": [
+            "complete",
+            "not-computed"
+          ]
+        },
+        "adapter": {
+          "enum": [
+            "javascript",
+            "unsupported"
+          ]
+        },
+        "analysisStatus": {
+          "enum": [
+            "analyzed",
+            "unsupported",
+            "parse-failed",
+            "analysis-failed",
+            "budget-exceeded",
+            "read-failed",
+            "changed-during-read",
+            "missing",
+            "not-regular",
+            "excluded"
+          ]
+        },
+        "adapterStatus": {
+          "enum": [
+            "completed",
+            "parse-failed",
+            "failed",
+            "not-run"
+          ]
+        },
+        "reason": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "sizeBytes": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "bytesRead": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "budgetBytesCharged": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "hashStatus": {
+                "const": "complete"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "sha256": {
+                "$ref": "#/$defs/digest"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "hashStatus": {
+                "const": "not-computed"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "sha256": {
+                "type": "null"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "analysisStatus": {
+                "const": "analyzed"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "adapter": {
+                "const": "javascript"
+              },
+              "adapterStatus": {
+                "const": "completed"
+              },
+              "reason": {
+                "type": "null"
+              },
+              "hashStatus": {
+                "const": "complete"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "analysisStatus": {
+                "not": {
+                  "const": "analyzed"
+                }
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "reason": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "analysisStatus": {
+                "const": "unsupported"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "adapter": {
+                "const": "unsupported"
+              },
+              "adapterStatus": {
+                "const": "not-run"
+              },
+              "hashStatus": {
+                "const": "complete"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "analysisStatus": {
+                "const": "parse-failed"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "adapter": {
+                "const": "javascript"
+              },
+              "adapterStatus": {
+                "const": "parse-failed"
+              },
+              "hashStatus": {
+                "const": "complete"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "analysisStatus": {
+                "const": "analysis-failed"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "adapter": {
+                "const": "javascript"
+              },
+              "adapterStatus": {
+                "const": "failed"
+              },
+              "hashStatus": {
+                "const": "complete"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "analysisStatus": {
+                "enum": [
+                  "budget-exceeded",
+                  "read-failed",
+                  "changed-during-read",
+                  "missing",
+                  "not-regular",
+                  "excluded"
+                ]
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "adapterStatus": {
+                "const": "not-run"
+              },
+              "hashStatus": {
+                "const": "not-computed"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "snapshot",
+        "sha256"
+      ],
+      "properties": {
+        "sourceId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "pointer": {
+          "type": "string",
+          "pattern": "^#/"
+        },
+        "terms": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 1
+        },
+        "url": {
+          "type": "string",
+          "pattern": "^https://[^\\s]+$"
+        },
+        "snapshot": {
+          "$ref": "#/$defs/path"
+        },
+        "sha256": {
+          "$ref": "#/$defs/digest"
+        },
+        "fetchedAt": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(?:\\.[0-9]+)?Z$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "originalPath": {
+          "$ref": "#/$defs/path"
+        }
+      },
+      "oneOf": [
+        {
+          "required": [
+            "sourceId",
+            "terms",
+            "url",
+            "fetchedAt"
+          ]
+        },
+        {
+          "not": {
+            "required": [
+              "sourceId"
+            ]
+          }
+        }
+      ]
+    },
+    "finding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "file",
+        "line",
+        "ruleId",
+        "severity",
+        "title",
+        "recommendation",
+        "evidence",
+        "kind"
+      ],
+      "properties": {
+        "file": {
+          "$ref": "#/$defs/path"
+        },
+        "line": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "column": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "ruleId": {
+          "$ref": "#/$defs/ruleId"
+        },
+        "severity": {
+          "enum": [
+            "P1",
+            "P2",
+            "P3"
+          ]
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1
+        },
+        "recommendation": {
+          "type": "string",
+          "minLength": 1
+        },
+        "evidence": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/evidence"
+          },
+          "minItems": 1
+        },
+        "kind": {
+          "enum": [
+            "documented",
+            "observed"
+          ]
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "documented"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "evidence": {
+                "contains": {
+                  "required": [
+                    "sourceId"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "manual": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "file",
+        "line",
+        "ruleId",
+        "reason",
+        "category"
+      ],
+      "properties": {
+        "file": {
+          "$ref": "#/$defs/path"
+        },
+        "line": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "ruleId": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ruleId"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1
+        },
+        "category": {
+          "enum": [
+            "behavior-review",
+            "unanalyzed",
+            "excluded"
+          ]
+        }
+      }
+    },
+    "policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "maxFileBytes",
+        "maxTotalBytes",
+        "chunkBytes",
+        "fileOrder",
+        "selection",
+        "baseRef",
+        "privatePaths",
+        "untrackedIgnored"
+      ],
+      "properties": {
+        "maxFileBytes": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 16777216
+        },
+        "maxTotalBytes": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 268435456
+        },
+        "chunkBytes": {
+          "const": 65536
+        },
+        "fileOrder": {
+          "const": "utf16-path-order"
+        },
+        "selection": {
+          "enum": [
+            "explicit",
+            "changed-and-untracked"
+          ]
+        },
+        "baseRef": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "privatePaths": {
+          "const": "reject-explicit-report-base"
+        },
+        "untrackedIgnored": {
+          "const": "exclude-in-base-only"
+        }
+      }
+    },
+    "coverage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "measurement",
+        "automatedFindingsOnly",
+        "unprovenComplianceIsNotPass",
+        "ruleCount",
+        "selectedRules",
+        "excludedRules",
+        "checks",
+        "checkApplicability",
+        "unsupportedFiles",
+        "parseFailedFiles",
+        "unanalyzedFiles"
+      ],
+      "properties": {
+        "measurement": {
+          "const": "selected-rule-inventory-only"
+        },
+        "automatedFindingsOnly": {
+          "const": true
+        },
+        "unprovenComplianceIsNotPass": {
+          "const": true
+        },
+        "ruleCount": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "selectedRules": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "kind",
+              "scope",
+              "status"
+            ],
+            "properties": {
+              "id": {
+                "$ref": "#/$defs/ruleId"
+              },
+              "kind": {
+                "enum": [
+                  "documented",
+                  "observed"
+                ]
+              },
+              "scope": {
+                "enum": [
+                  "common",
+                  "payments",
+                  "trading"
+                ]
+              },
+              "status": {
+                "enum": [
+                  "approved",
+                  "legacy"
+                ]
+              }
+            }
+          }
+        },
+        "excludedRules": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "kind",
+              "scope",
+              "status",
+              "reason"
+            ],
+            "properties": {
+              "id": {
+                "$ref": "#/$defs/ruleId"
+              },
+              "kind": {
+                "enum": [
+                  "documented",
+                  "observed",
+                  "inference"
+                ]
+              },
+              "scope": {
+                "enum": [
+                  "common",
+                  "payments",
+                  "trading"
+                ]
+              },
+              "status": {
+                "enum": [
+                  "draft",
+                  "in_review",
+                  "approved",
+                  "deprecated",
+                  "superseded",
+                  "legacy"
+                ]
+              },
+              "reason": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          }
+        },
+        "checks": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "ruleIds",
+              "adapter",
+              "tests"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "ruleIds": {
+                "type": "array",
+                "minItems": 1,
+                "uniqueItems": true,
+                "items": {
+                  "$ref": "#/$defs/ruleId"
+                }
+              },
+              "adapter": {
+                "const": "javascript"
+              },
+              "tests": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              }
+            }
+          }
+        },
+        "checkApplicability": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "file",
+              "checkId",
+              "ruleIds",
+              "status",
+              "reason"
+            ],
+            "properties": {
+              "file": {
+                "$ref": "#/$defs/path"
+              },
+              "checkId": {
+                "type": "string",
+                "minLength": 1
+              },
+              "ruleIds": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/$defs/ruleId"
+                },
+                "uniqueItems": true
+              },
+              "status": {
+                "enum": [
+                  "ran",
+                  "partial",
+                  "manual-only",
+                  "not-applicable",
+                  "not-run"
+                ]
+              },
+              "reason": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            "allOf": [
+              {
+                "if": {
+                  "properties": {
+                    "status": {
+                      "not": {
+                        "const": "ran"
+                      }
+                    }
+                  }
+                },
+                "then": {
+                  "properties": {
+                    "reason": {
+                      "type": "string",
+                      "minLength": 1
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        },
+        "unsupportedFiles": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/path"
+          },
+          "uniqueItems": true
+        },
+        "parseFailedFiles": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/path"
+          },
+          "uniqueItems": true
+        },
+        "unanalyzedFiles": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/path"
+          },
+          "uniqueItems": true
+        }
+      }
+    },
+    "codeVersion": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "head",
+        "headStatus",
+        "files"
+      ],
+      "properties": {
+        "head": {
+          "type": "string",
+          "pattern": "^(?:[0-9a-f]{40}|[0-9a-f]{64}|unavailable)$"
+        },
+        "headStatus": {
+          "enum": [
+            "available",
+            "unavailable"
+          ]
+        },
+        "files": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/file"
+          }
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "headStatus": {
+                "const": "unavailable"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "head": {
+                "const": "unavailable"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "headStatus": {
+                "const": "available"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "head": {
+                "not": {
+                  "const": "unavailable"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "sourceFreshness": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "mode",
+        "collectedAt",
+        "latestCheck",
+        "latestClaim"
+      ],
+      "properties": {
+        "mode": {
+          "const": "offline-pinned-snapshot"
+        },
+        "collectedAt": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(?:\\.[0-9]+)?Z$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "latestCheck": {
+          "anyOf": [
+            {
+              "type": "object",
+              "required": [
+                "checkedAt",
+                "status",
+                "summary"
+              ],
+              "properties": {
+                "checkedAt": {
+                  "type": "string",
+                  "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(?:\\.[0-9]+)?Z$"
+                },
+                "status": {
+                  "enum": [
+                    "complete",
+                    "incomplete"
+                  ]
+                },
+                "summary": {
+                  "type": "object"
+                }
+              }
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "latestClaim": {
+          "const": false
+        }
+      }
+    }
+  }
+}

@@ -54,7 +54,8 @@
   {
     "id": "JS-PRECISION",
     "ruleIds": [
-      "TRADE-PRECISION-005"
+      "TRADE-PRECISION-005",
+      "PAY-AMOUNT-002"
     ],
     "adapter": "javascript",
     "tests": [

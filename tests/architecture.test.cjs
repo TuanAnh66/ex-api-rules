@@ -172,6 +172,7 @@ test('CLI signing review keeps uncertain hashes non-blocking and still blocks a 
   assert.equal(good.status,0);assert.equal(good.report.findings.length,0);
   const unknown=run("function sign(body){return {body_hash:hashBody(body)};}");
   assert.equal(unknown.status,0);assert(unknown.report.manualChecks.some(m=>m.ruleId==='COMMON-SIGN-001'&&/unresolved/.test(m.reason)));
-  const bad=run("function sign(body){return {body_hash:crypto.createHash('sha256').update('wrong').digest('base64url')};}");
+  const {signing,hash}=require('./fixtures/adapter-confidence.cjs');
+  const bad=run(signing(`{body_hash:${hash('wrong')},path:'/v1/accounts/example/balance?fixture=1'}`));
   assert.equal(bad.status,1);assert(bad.report.findings.some(f=>f.ruleId==='COMMON-SIGN-001'&&f.kind==='documented'));
 });
