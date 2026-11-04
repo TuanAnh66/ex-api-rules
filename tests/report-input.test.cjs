@@ -44,7 +44,11 @@ function withReads(target,hook,run){
 }
 
 test('report v1 schema bytes and v1 reader/SARIF remain compatible',()=>{
-  assert.equal(core.hash(fs.readFileSync(path.join(root,'schemas/report.schema.json'))),'ef5db63594aedbaaff91ced201ba3c226fbb81c208ec2ae212a6775e608bae9a');
+  // Git stores LF; Windows may check this existing text file out as CRLF.
+  // Accept only the two exact historical byte sequences, not arbitrary reformatting.
+  const schema=fs.readFileSync(path.join(root,'schemas/report.schema.json'));
+  assert(['f7c27d164444f79cb3865730999d91bb1f43efd42279c63f2326b73e74b6651e','ef5db63594aedbaaff91ced201ba3c226fbb81c208ec2ae212a6775e608bae9a'].includes(core.hash(schema)),'Historical v1 schema bytes changed');
+  assert.deepEqual(fs.readFileSync(path.join(root,'packages/core/schemas/report.schema.json')),schema,'Packaged v1 schema preserves checkout bytes');
   assert.equal(core.validate('report',vectors.reports.v1).schemaVersion,1);
   const sarif=core.toSarif(vectors.reports.v1);assert.equal(sarif.version,'2.1.0');assert.equal(sarif.runs[0].results[0].locations[0].physicalLocation.region.startLine,1);
   assert.doesNotThrow(()=>core.stringify(sarif));assert(!('schemaVersion' in sarif.runs[0].properties));
