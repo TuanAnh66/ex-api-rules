@@ -1,6 +1,6 @@
 {
   "name": "ex-api-rules-core",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Language-neutral Exness rule bundle and schema validation",
   "main": "src/index.cjs",
   "types": "src/index.d.ts",

@@ -1,6 +1,6 @@
 {
   "name": "ex-api-rules",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "On-demand Exness rule collection and offline project review",
   "main": "src/main.cjs",
   "bin": {

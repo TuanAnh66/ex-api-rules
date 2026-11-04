@@ -2,7 +2,7 @@
 
 Versioned Exness Payments/Trading evidence and offline code review. One repository maintains language-neutral knowledge, a pure core, a Node.js CLI and an on-demand agent workflow.
 
-Tool **0.2.0** retains the approved **v0.1.0 rule bundle unchanged** (29 rules, 27 sources). This release changes distribution and reproducibility, not Exness requirements. npm publication is deferred; install release tarballs or use the pinned submodule.
+Tool **0.2.1** is being prepared as a draft release and retains the approved **v0.1.0 rule bundle unchanged** (29 rules, 27 sources). The tool changes distribution and reproducibility, not Exness requirements. npm publication is deferred; install reviewed release tarballs or use the pinned submodule.
 
 ## Start from a checkout
 
@@ -25,7 +25,7 @@ Use your actual project path on Windows. Git targets the reviewed project, never
 Download both package tarballs, the portable bundle and SHA256SUMS from the same release. Verify raw file checksums before installation. Until npm publication, install both local tarballs together:
 
 ```sh
-npm install --ignore-scripts ./ex-api-rules-core-0.2.0.tgz ./ex-api-rules-0.2.0.tgz
+npm install --ignore-scripts ./ex-api-rules-core-0.2.1.tgz ./ex-api-rules-0.2.1.tgz
 npx --no-install ex-api-rules bundle import --file /path/to/exness-bundle-v0.1.0.json
 npx --no-install ex-api-rules pin --bundle 2026-11-03T16-00-20-366Z-47729188
 npx --no-install ex-api-rules review --files client.cjs

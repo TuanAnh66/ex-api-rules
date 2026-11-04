@@ -1,7 +1,7 @@
 'use strict';
 const crypto=require('node:crypto');
 const Ajv=require('ajv/dist/2020');
-const VERSION='0.2.0';
+const VERSION='0.2.1';
 const hash=value=>crypto.createHash('sha256').update(value).digest('hex');
 function canonical(value){
   if(value===undefined||typeof value==='bigint'||typeof value==='function'||typeof value==='symbol')throw Error('Not a JSON protocol value');
